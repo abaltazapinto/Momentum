@@ -17,6 +17,25 @@ const taskListEl = document.getElementById("task-list")
 const themeToggleEl = document.getElementById("theme-toggle")
 
 const themeStorageKey = "momentum-theme"
+const lucideIconNodes = {
+    check: [
+        ["path", { d: "M20 6 9 17l-5-5" }]
+    ],
+    square: [
+        ["rect", { width: "18", height: "18", x: "3", y: "3", rx: "2" }]
+    ],
+    squareCheckBig: [
+        ["path", { d: "M21 10.656V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12.344" }],
+        ["path", { d: "m9 11 3 3L22 4.5" }]
+    ],
+    trash2: [
+        ["path", { d: "M3 6h18" }],
+        ["path", { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" }],
+        ["path", { d: "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" }],
+        ["line", { x1: "10", x2: "10", y1: "11", y2: "17" }],
+        ["line", { x1: "14", x2: "14", y1: "11", y2: "17" }]
+    ]
+}
 
 const state = {
     tasks: [],
@@ -218,7 +237,9 @@ function createEmptyStateElement() {
     const iconEl = document.createElement("span")
     iconEl.className = "task-list__empty-icon"
     iconEl.setAttribute("aria-hidden", "true")
-    iconEl.textContent = "✓"
+
+    const checkIconEl = createLucideIcon("check")
+    iconEl.append(checkIconEl)
 
     const titleEl = document.createElement("h2")
     titleEl.className = "task-list__empty-title"
@@ -242,12 +263,26 @@ function createTaskElement(task) {
         taskEl.classList.add("task--completed")
     }
 
+    const checkboxControlEl = document.createElement("span")
+    checkboxControlEl.className = "task__checkbox-control"
+
     const checkboxEl = document.createElement("input")
     checkboxEl.className = "task__checkbox"
     checkboxEl.type = "checkbox"
     checkboxEl.checked = task.completed
     checkboxEl.dataset.action = "toggle-task"
     checkboxEl.setAttribute("aria-label", `Mark ${task.title} as ${task.completed ? "active" : "complete"}`)
+
+    const uncheckedIconEl = createLucideIcon(
+        "square",
+        "task__checkbox-icon task__checkbox-icon--unchecked"
+    )
+    const checkedIconEl = createLucideIcon(
+        "squareCheckBig",
+        "task__checkbox-icon task__checkbox-icon--checked"
+    )
+
+    checkboxControlEl.append(checkboxEl, uncheckedIconEl, checkedIconEl)
 
     const titleEl = document.createElement("span")
     titleEl.className = "task__title"
@@ -259,28 +294,31 @@ function createTaskElement(task) {
     deleteButtonEl.dataset.action = "delete-task"
     deleteButtonEl.setAttribute("aria-label", "Delete task")
 
-    const deleteIconEl = document.createElementNS("http://www.w3.org/2000/svg", "svg")
-    deleteIconEl.classList.add("task__delete-icon")
-    deleteIconEl.setAttribute("viewBox", "0 0 24 24")
-    deleteIconEl.setAttribute("fill", "none")
-    deleteIconEl.setAttribute("stroke", "currentColor")
-    deleteIconEl.setAttribute("stroke-width", "2")
-    deleteIconEl.setAttribute("stroke-linecap", "round")
-    deleteIconEl.setAttribute("stroke-linejoin", "round")
-    deleteIconEl.setAttribute("aria-hidden", "true")
-
-    const lidPathEl = document.createElementNS("http://www.w3.org/2000/svg", "path")
-    lidPathEl.setAttribute("d", "M3 6h18M8 6V4h8v2")
-
-    const binPathEl = document.createElementNS("http://www.w3.org/2000/svg", "path")
-    binPathEl.setAttribute("d", "M19 6l-1 14H6L5 6m4 4v6m6-6v6")
-
-    deleteIconEl.append(lidPathEl, binPathEl)
+    const deleteIconEl = createLucideIcon("trash2", "task__delete-icon")
     deleteButtonEl.append(deleteIconEl)
 
-    taskEl.append(checkboxEl, titleEl, deleteButtonEl)
+    taskEl.append(checkboxControlEl, titleEl, deleteButtonEl)
 
     return taskEl
+}
+
+function createLucideIcon(iconName, className = "") {
+    const iconEl = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+    iconEl.setAttribute("class", `lucide ${className}`.trim())
+    iconEl.setAttribute("viewBox", "0 0 24 24")
+    iconEl.setAttribute("aria-hidden", "true")
+
+    for (const [elementName, attributes] of lucideIconNodes[iconName]) {
+        const iconNodeEl = document.createElementNS("http://www.w3.org/2000/svg", elementName)
+
+        for (const [attributeName, value] of Object.entries(attributes)) {
+            iconNodeEl.setAttribute(attributeName, value)
+        }
+
+        iconEl.append(iconNodeEl)
+    }
+
+    return iconEl
 }
 
 function clearTaskInput() {

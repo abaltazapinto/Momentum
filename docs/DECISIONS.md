@@ -6,7 +6,7 @@ Deploy using Netlify instead of GitHub Pages.
 Reason:
 Simpler deployment and better support for future Firebase features.
 
-2026-07-18
+# 2026-07-18
 
 Decision:
 Desktop uses a responsive card grid.

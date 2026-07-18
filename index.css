@@ -70,6 +70,15 @@ html, body {
     margin-top: 8px;
 }
 
+.lucide {
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+}
+
 .theme-toggle {
     align-items: center;
     background-color: transparent;
@@ -80,6 +89,7 @@ html, body {
     position: absolute;
     right: 0;
     top: 0;
+    transition: background-color 180ms ease, color 180ms ease;
 }
 
 .theme-toggle:hover {
@@ -192,11 +202,56 @@ ul {
     transform: translateY(-2px);
 }
 
+.task__checkbox-control {
+    color: var(--color-delete);
+    height: 22px;
+    position: relative;
+    transition: color 180ms ease;
+    width: 22px;
+}
+
+.task__checkbox-control:hover {
+    color: var(--color-checkbox);
+}
+
 .task__checkbox {
-    accent-color: var(--color-checkbox);
-    height: 20px;
+    cursor: pointer;
+    height: 100%;
+    inset: 0;
     margin: 0;
-    width: 20px;
+    opacity: 0;
+    position: absolute;
+    width: 100%;
+    z-index: 1;
+}
+
+.task__checkbox-icon {
+    height: 22px;
+    inset: 0;
+    position: absolute;
+    width: 22px;
+}
+
+.task__checkbox-icon--checked {
+    color: var(--color-checkbox);
+    display: none;
+}
+
+.task__checkbox:checked ~ .task__checkbox-icon--unchecked {
+    display: none;
+}
+
+.task__checkbox:checked ~ .task__checkbox-icon--checked {
+    display: block;
+}
+
+.task__checkbox:focus-visible ~ .task__checkbox-icon {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 3px;
+}
+
+.task__checkbox:disabled {
+    cursor: not-allowed;
 }
 
 .task__title {
@@ -215,6 +270,7 @@ ul {
     display: flex;
     justify-content: center;
     padding: 8px;
+    transition: background-color 180ms ease, color 180ms ease;
 }
 
 .task__delete-button:hover {
@@ -253,6 +309,11 @@ ul {
     width: 48px;
 }
 
+.task-list__empty-icon .lucide {
+    height: 24px;
+    width: 24px;
+}
+
 .task-list__empty-title {
     font-size: 20px;
     margin: 0 0 6px;
@@ -265,6 +326,16 @@ ul {
 }
 
 @media (min-width: 640px) {
+    .app-header {
+        position: static;
+    }
+
+    .theme-toggle {
+        position: absolute;
+        right: 28px;
+        top: 28px;
+    }
+
     ul {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -300,5 +371,11 @@ ul {
 
     .task:hover {
         transform: none;
+    }
+
+    .theme-toggle,
+    .task__checkbox-control,
+    .task__delete-button {
+        transition: none;
     }
 }
