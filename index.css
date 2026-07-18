@@ -19,8 +19,6 @@ html, body {
 
 .app-header h1 {
     margin-bottom: 0;
-    font-family:'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
-    font-weight:bold;
 }
 
 .app-header p {
@@ -35,7 +33,6 @@ html, body {
 .task-form label {
     font-weight: bold;
     margin-bottom: 6px;
-    text-align: center;
 }
 
 input {
@@ -52,7 +49,7 @@ input {
 
 button {
     color: #FDFDFD;
-    background-color: #353839;
+    background-color: #AC485A;
     border: 0;
     padding: 15px;
     border-radius: 8px;
@@ -66,6 +63,28 @@ button:hover {
     cursor: pointer;
 }
 
+button:focus-visible,
+input:focus-visible {
+    outline: 3px solid #432000;
+    outline-offset: 3px;
+}
+
+button:disabled,
+input:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.task-status {
+    min-height: 1.25rem;
+    margin: 10px 0 0;
+    text-align: center;
+}
+
+.task-status--error {
+    color: #9D1830;
+}
+
 ul {
     list-style-type: none;
     padding: 0;
@@ -74,17 +93,53 @@ ul {
     gap: 10px;
 }
 
-ul li {
+.task {
+    align-items: center;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     font-size: 20px;
     background-color: #FFFDF8;
     padding: 15px;
     border-radius: 8px;
-    flex-grow: 1;
-    text-align: center;
-    box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.2)
+    box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    box-sizing: border-box;
 }
 
-ul li:hover {
+.task:hover {
     background-color: #FFECC7;
-    cursor: pointer;
+}
+
+.task__checkbox {
+    accent-color: #AC485A;
+    height: 20px;
+    margin: 0;
+    width: 20px;
+}
+
+.task__title {
+    overflow-wrap: anywhere;
+}
+
+.task--completed .task__title {
+    opacity: 0.65;
+    text-decoration: line-through;
+}
+
+.task__delete-button {
+    background-color: transparent;
+    color: #9D1830;
+    font-size: 14px;
+    padding: 8px;
+}
+
+.task__delete-button:hover {
+    background-color: #FFE0E5;
+}
+
+.task-list__empty {
+    padding: 15px;
+    text-align: center;
+    width: 100%;
 }
