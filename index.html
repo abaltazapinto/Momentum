@@ -1,8 +1,13 @@
 <!doctype html>
-<html>
+<html lang="en">
     <head>
-        <title>Add to Cart</title>
+        <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta
+            name="description"
+            content="Momentum is a simple personal task manager."
+        >
+        <title>Momentum</title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300&display=swap" rel="stylesheet">
@@ -13,13 +18,27 @@
         <link rel="stylesheet" href="index.css">
     </head>
     <body>
-        <div class="container">
-            <img src="assets/cat.png">
-            <input type="text" id="input-field" placeholder="Bread">
-            <button id="add-button">Add to cart</button>
-            <ul id="shopping-list">
-            </ul>
-        </div>
+        <main class="container">
+            <header class="app-header">
+                <h1>Momentum</h1>
+                <p>Keep moving forward, one task at a time.</p>
+            </header>
+
+            <form id="task-form" class="task-form">
+                <label for="task-input">Task</label>
+                <input
+                    type="text"
+                    id="task-input"
+                    name="task"
+                    placeholder="What needs to be done?"
+                    autocomplete="off"
+                    required
+                >
+                <button type="submit" id="add-task-button">Add task</button>
+            </form>
+
+            <ul id="task-list" aria-label="Tasks"></ul>
+        </main>
         <script src="index.js" type="module"></script>
     </body>
 </html>

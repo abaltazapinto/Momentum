@@ -7,59 +7,59 @@ const appSettings = {
 
 const app = initializeApp(appSettings)
 const database = getDatabase(app)
-const shoppingListInDB = ref(database, "shoppingList")
+const tasksInDB = ref(database, "tasks")
 
-const inputFieldEl = document.getElementById("input-field")
-const addButtonEl = document.getElementById("add-button")
-const shoppingListEl = document.getElementById("shopping-list")
+const taskFormEl = document.getElementById("task-form")
+const taskInputEl = document.getElementById("task-input")
+const taskListEl = document.getElementById("task-list")
 
-addButtonEl.addEventListener("click", function() {
-    let inputValue = inputFieldEl.value
-    
-    push(shoppingListInDB, inputValue)
-    
-    clearInputFieldEl()
+taskFormEl.addEventListener("submit", function(event) {
+    event.preventDefault()
+
+    const taskTitle = taskInputEl.value.trim()
+
+    if (!taskTitle) {
+        return
+    }
+
+    push(tasksInDB, taskTitle)
+
+    clearTaskInput()
 })
 
-onValue(shoppingListInDB, function(snapshot) {
+onValue(tasksInDB, function(snapshot) {
     if (snapshot.exists()) {
-        let itemsArray = Object.entries(snapshot.val())
-    
-        clearShoppingListEl()
-        
-        for (let i = 0; i < itemsArray.length; i++) {
-            let currentItem = itemsArray[i]
-            let currentItemID = currentItem[0]
-            let currentItemValue = currentItem[1]
-            
-            appendItemToShoppingListEl(currentItem)
-        }    
+        const tasks = Object.entries(snapshot.val())
+
+        clearTaskList()
+
+        for (const task of tasks) {
+            appendTaskToList(task)
+        }
     } else {
-        shoppingListEl.innerHTML = "No items here... yet"
+        taskListEl.textContent = "No tasks here... yet."
     }
 })
 
-function clearShoppingListEl() {
-    shoppingListEl.innerHTML = ""
+function clearTaskList() {
+    taskListEl.textContent = ""
 }
 
-function clearInputFieldEl() {
-    inputFieldEl.value = ""
+function clearTaskInput() {
+    taskInputEl.value = ""
 }
 
-function appendItemToShoppingListEl(item) {
-    let itemID = item[0]
-    let itemValue = item[1]
-    
-    let newEl = document.createElement("li")
-    
-    newEl.textContent = itemValue
-    
-    newEl.addEventListener("dblclick", function() {
-        let exactLocationOfItemInDB = ref(database, `shoppingList/${itemID}`)
-        
-        remove(exactLocationOfItemInDB)
+function appendTaskToList(task) {
+    const [taskID, taskTitle] = task
+    const taskEl = document.createElement("li")
+
+    taskEl.textContent = taskTitle
+
+    taskEl.addEventListener("dblclick", function() {
+        const taskInDB = ref(database, `tasks/${taskID}`)
+
+        remove(taskInDB)
     })
-    
-    shoppingListEl.append(newEl)
+
+    taskListEl.append(taskEl)
 }

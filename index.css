@@ -4,7 +4,6 @@ html, body {
     font-family: 'Rubik', sans-serif;
     background-color: #EEF0F4;
     color: #432000;
-    user-select: none;
 }
 
 .container {
@@ -14,9 +13,26 @@ html, body {
     margin: 30px auto;
 }
 
-img {
-    width: 150px;
-    margin: 0 auto;
+.app-header {
+    text-align: center;
+}
+
+.app-header h1 {
+    margin-bottom: 0;
+}
+
+.app-header p {
+    margin-top: 8px;
+}
+
+.task-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.task-form label {
+    font-weight: bold;
+    margin-bottom: 6px;
 }
 
 input {
@@ -28,7 +44,7 @@ input {
     font-size: 20px;
     text-align: center;
     font-family: 'Rubik', sans-serif;
-    margin: 10px 0;
+    margin-bottom: 10px;
 }
 
 button {
