@@ -33,6 +33,7 @@ html, body {
 .task-form label {
     font-weight: bold;
     margin-bottom: 6px;
+    text-align: center;
 }
 
 input {
@@ -49,7 +50,7 @@ input {
 
 button {
     color: #FDFDFD;
-    background-color: #AC485A;
+    background-color: #353839;
     border: 0;
     padding: 15px;
     border-radius: 8px;
@@ -139,7 +140,39 @@ ul {
 }
 
 .task-list__empty {
-    padding: 15px;
+    align-items: center;
+    background-color: #FFFDF8;
+    border: 1px dashed #C7AD9D;
+    border-radius: 8px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    padding: 30px 20px;
     text-align: center;
     width: 100%;
+}
+
+.task-list__empty-icon {
+    align-items: center;
+    background-color: #F7DDE2;
+    border-radius: 50%;
+    color: #9D1830;
+    display: flex;
+    font-size: 24px;
+    font-weight: bold;
+    height: 48px;
+    justify-content: center;
+    margin-bottom: 14px;
+    width: 48px;
+}
+
+.task-list__empty-title {
+    font-size: 20px;
+    margin: 0 0 6px;
+}
+
+.task-list__empty-message {
+    color: #6F574A;
+    line-height: 1.5;
+    margin: 0;
 }

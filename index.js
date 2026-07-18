@@ -152,10 +152,7 @@ function renderTasks() {
     taskListEl.textContent = ""
 
     if (state.tasks.length === 0) {
-        const emptyStateEl = document.createElement("li")
-        emptyStateEl.className = "task-list__empty"
-        emptyStateEl.textContent = "No tasks here... yet."
-        taskListEl.append(emptyStateEl)
+        taskListEl.append(createEmptyStateElement())
         return
     }
 
@@ -166,6 +163,29 @@ function renderTasks() {
     }
 
     taskListEl.append(fragment)
+}
+
+function createEmptyStateElement() {
+    const emptyStateEl = document.createElement("li")
+    emptyStateEl.className = "task-list__empty"
+    emptyStateEl.setAttribute("role", "status")
+
+    const iconEl = document.createElement("span")
+    iconEl.className = "task-list__empty-icon"
+    iconEl.setAttribute("aria-hidden", "true")
+    iconEl.textContent = "✓"
+
+    const titleEl = document.createElement("h2")
+    titleEl.className = "task-list__empty-title"
+    titleEl.textContent = "No tasks yet"
+
+    const messageEl = document.createElement("p")
+    messageEl.className = "task-list__empty-message"
+    messageEl.textContent = "Add your first task above to get started."
+
+    emptyStateEl.append(iconEl, titleEl, messageEl)
+
+    return emptyStateEl
 }
 
 function createTaskElement(task) {
