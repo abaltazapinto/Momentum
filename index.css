@@ -180,6 +180,7 @@ ul {
     grid-template-columns: 1fr;
     list-style-type: none;
     margin: 24px 0 0;
+    min-height: 96px;
     padding: 0;
 }
 
@@ -282,6 +283,37 @@ ul {
     width: 20px;
 }
 
+.task-list__loading {
+    align-items: center;
+    background-color: var(--color-surface);
+    border: 1px dashed var(--color-border);
+    border-radius: 8px;
+    box-sizing: border-box;
+    color: var(--color-muted);
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    min-height: 96px;
+    padding: 20px;
+    width: 100%;
+}
+
+.task-list__loading-spinner {
+    animation: task-loading-spin 800ms linear infinite;
+    border: 3px solid var(--color-border);
+    border-radius: 50%;
+    border-top-color: var(--color-checkbox);
+    box-sizing: border-box;
+    height: 22px;
+    width: 22px;
+}
+
+@keyframes task-loading-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 .task-list__empty {
     align-items: center;
     background-color: var(--color-surface);
@@ -340,7 +372,8 @@ ul {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .task-list__empty {
+    .task-list__empty,
+    .task-list__loading {
         grid-column: 1 / -1;
     }
 }
@@ -377,5 +410,9 @@ ul {
     .task__checkbox-control,
     .task__delete-button {
         transition: none;
+    }
+
+    .task-list__loading-spinner {
+        animation: none;
     }
 }

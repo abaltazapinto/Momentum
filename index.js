@@ -39,9 +39,11 @@ const lucideIconNodes = {
 
 const state = {
     tasks: [],
-    isCreatingTask: false
+    isCreatingTask: false,
+    isLoadingTasks: true
 }
 
+renderTasks()
 updateThemeToggle()
 
 requestAnimationFrame(function() {
@@ -112,8 +114,11 @@ onValue(tasksInDB, function(snapshot) {
         state.tasks = []
     }
 
+    state.isLoadingTasks = false
     renderTasks()
 }, function(error) {
+    state.isLoadingTasks = false
+    taskListEl.textContent = ""
     showError("We couldn't load your tasks. Please refresh and try again.")
     console.error("Failed to load tasks:", error)
 })
@@ -215,6 +220,11 @@ function updateThemeToggle() {
 function renderTasks() {
     taskListEl.textContent = ""
 
+    if (state.isLoadingTasks) {
+        taskListEl.append(createLoadingStateElement())
+        return
+    }
+
     if (state.tasks.length === 0) {
         taskListEl.append(createEmptyStateElement())
         return
@@ -227,6 +237,23 @@ function renderTasks() {
     }
 
     taskListEl.append(fragment)
+}
+
+function createLoadingStateElement() {
+    const loadingStateEl = document.createElement("li")
+    loadingStateEl.className = "task-list__loading"
+    loadingStateEl.setAttribute("role", "status")
+
+    const spinnerEl = document.createElement("span")
+    spinnerEl.className = "task-list__loading-spinner"
+    spinnerEl.setAttribute("aria-hidden", "true")
+
+    const messageEl = document.createElement("span")
+    messageEl.textContent = "Loading tasks..."
+
+    loadingStateEl.append(spinnerEl, messageEl)
+
+    return loadingStateEl
 }
 
 function createEmptyStateElement() {

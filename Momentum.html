@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<!-- saved from url=(0035)https://momentum-tasks.netlify.app/ -->
+<html lang="en" class="theme-ready" data-theme="light"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="Momentum is a simple personal task manager.">
+        <script>
+            try {
+                const savedTheme = localStorage.getItem("momentum-theme")
+
+                if (savedTheme === "dark") {
+                    document.documentElement.dataset.theme = "dark"
+                }
+            } catch (error) {
+                // The light theme remains available when storage is blocked.
+            }
+        </script>
+        <title>Momentum</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com/">
+        <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+        <link href="./Momentum_files/css2" rel="stylesheet">
+        <link rel="icon" type="image/svg+xml" href="https://momentum-tasks.netlify.app/assets/momentum-logo-DaSPDisd.svg">
+        <link rel="icon" href="https://momentum-tasks.netlify.app/assets/favicon-DNGr-S59.ico" sizes="any">
+        <link rel="icon" type="image/png" sizes="32x32" href="https://momentum-tasks.netlify.app/assets/favicon-32x32-euDZch58.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="https://momentum-tasks.netlify.app/assets/favicon-16x16-RKmhXvh6.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="https://momentum-tasks.netlify.app/assets/apple-touch-icon-CS7a2kyM.png">
+        <link rel="manifest" href="https://momentum-tasks.netlify.app/assets/site-BNHCqK-M.webmanifest">
+      <script type="module" crossorigin="" src="./Momentum_files/index-BNGmaGdp.js"></script>
+      <link rel="stylesheet" crossorigin="" href="./Momentum_files/index-B14Jo3di.css">
+    </head>
+    <body>
+        <main class="container">
+            <header class="app-header">
+                <h1>Momentum</h1>
+                <p>Keep moving forward, one task at a time.</p>
+                <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Switch to dark mode" title="Switch to dark mode">
+                    <svg class="lucide theme-toggle__icon theme-toggle__icon--moon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"></path>
+                    </svg>
+                    <svg class="lucide theme-toggle__icon theme-toggle__icon--sun" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="4"></circle>
+                        <path d="M12 2v2"></path>
+                        <path d="M12 20v2"></path>
+                        <path d="m4.93 4.93 1.41 1.41"></path>
+                        <path d="m17.66 17.66 1.41 1.41"></path>
+                        <path d="M2 12h2"></path>
+                        <path d="M20 12h2"></path>
+                        <path d="m6.34 17.66-1.41 1.41"></path>
+                        <path d="m19.07 4.93-1.41 1.41"></path>
+                    </svg>
+                </button>
+            </header>
+
+            <form id="task-form" class="task-form">
+                <label for="task-input">Task</label>
+                <input type="text" id="task-input" name="task" placeholder="What needs to be done?" autocomplete="off" required="">
+                <button type="submit" id="add-task-button">Add task</button>
+            </form>
+
+            <p id="task-status" class="task-status" role="status" aria-live="polite"></p>
+
+            <ul id="task-list" aria-label="Tasks"><li class="task" data-task-id="-OxphJYVi-SiXeADJGBv"><span class="task__checkbox-control"><input class="task__checkbox" type="checkbox" data-action="toggle-task" aria-label="Mark https://www.youtube.com/shorts/EIEVx-O7oeU as complete"><svg class="lucide task__checkbox-icon task__checkbox-icon--unchecked" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"></rect></svg><svg class="lucide task__checkbox-icon task__checkbox-icon--checked" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10.656V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12.344"></path><path d="m9 11 3 3L22 4.5"></path></svg></span><span class="task__title">https://www.youtube.com/shorts/EIEVx-O7oeU</span><button class="task__delete-button" type="button" data-action="delete-task" aria-label="Delete task"><svg class="lucide task__delete-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg></button></li></ul>
+        </main>
+    
+
+</body></html>
