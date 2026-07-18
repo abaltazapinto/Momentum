@@ -19,6 +19,8 @@ html, body {
 
 .app-header h1 {
     margin-bottom: 0;
+    font-family:'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+    font-weight:bold;
 }
 
 .app-header p {
@@ -33,6 +35,7 @@ html, body {
 .task-form label {
     font-weight: bold;
     margin-bottom: 6px;
+    text-align: center;
 }
 
 input {
