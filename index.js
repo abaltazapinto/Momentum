@@ -14,23 +14,57 @@ const taskInputEl = document.getElementById("task-input")
 const addTaskButtonEl = document.getElementById("add-task-button")
 const taskStatusEl = document.getElementById("task-status")
 const taskListEl = document.getElementById("task-list")
+const themeToggleEl = document.getElementById("theme-toggle")
+
+const themeStorageKey = "momentum-theme"
 
 const state = {
     tasks: [],
     isCreatingTask: false
 }
 
+updateThemeToggle()
+
+requestAnimationFrame(function() {
+    document.documentElement.classList.add("theme-ready")
+})
+
+themeToggleEl.addEventListener("click", function() {
+    const nextTheme = getCurrentTheme() === "light" ? "dark" : "light"
+
+    document.documentElement.dataset.theme = nextTheme
+    updateThemeToggle()
+
+    try {
+        localStorage.setItem(themeStorageKey, nextTheme)
+    } catch (error) {
+        console.warn("Theme preference could not be saved.", error)
+    }
+})
+
+taskInputEl.addEventListener("invalid", function(event) {
+    event.preventDefault()
+    showError("Please enter a task.")
+    taskInputEl.focus()
+})
+
 taskFormEl.addEventListener("submit", async function(event) {
     event.preventDefault()
 
     const taskTitle = taskInputEl.value.trim()
 
-    if (!taskTitle || state.isCreatingTask) {
+    if (state.isCreatingTask) {
         return
     }
 
-    setCreatingTask(true)
+    if (!taskTitle) {
+        showError("Please enter a task.")
+        taskInputEl.focus()
+        return
+    }
+
     clearStatus()
+    setCreatingTask(true)
 
     try {
         await push(tasksInDB, {
@@ -148,6 +182,17 @@ function normalizeTask(id, value) {
     }
 }
 
+function getCurrentTheme() {
+    return document.documentElement.dataset.theme === "dark" ? "dark" : "light"
+}
+
+function updateThemeToggle() {
+    const nextTheme = getCurrentTheme() === "light" ? "dark" : "light"
+
+    themeToggleEl.setAttribute("aria-label", `Switch to ${nextTheme} mode`)
+    themeToggleEl.title = `Switch to ${nextTheme} mode`
+}
+
 function renderTasks() {
     taskListEl.textContent = ""
 
@@ -212,8 +257,26 @@ function createTaskElement(task) {
     deleteButtonEl.className = "task__delete-button"
     deleteButtonEl.type = "button"
     deleteButtonEl.dataset.action = "delete-task"
-    deleteButtonEl.setAttribute("aria-label", `Delete ${task.title}`)
-    deleteButtonEl.textContent = "Delete"
+    deleteButtonEl.setAttribute("aria-label", "Delete task")
+
+    const deleteIconEl = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+    deleteIconEl.classList.add("task__delete-icon")
+    deleteIconEl.setAttribute("viewBox", "0 0 24 24")
+    deleteIconEl.setAttribute("fill", "none")
+    deleteIconEl.setAttribute("stroke", "currentColor")
+    deleteIconEl.setAttribute("stroke-width", "2")
+    deleteIconEl.setAttribute("stroke-linecap", "round")
+    deleteIconEl.setAttribute("stroke-linejoin", "round")
+    deleteIconEl.setAttribute("aria-hidden", "true")
+
+    const lidPathEl = document.createElementNS("http://www.w3.org/2000/svg", "path")
+    lidPathEl.setAttribute("d", "M3 6h18M8 6V4h8v2")
+
+    const binPathEl = document.createElementNS("http://www.w3.org/2000/svg", "path")
+    binPathEl.setAttribute("d", "M19 6l-1 14H6L5 6m4 4v6m6-6v6")
+
+    deleteIconEl.append(lidPathEl, binPathEl)
+    deleteButtonEl.append(deleteIconEl)
 
     taskEl.append(checkboxEl, titleEl, deleteButtonEl)
 
