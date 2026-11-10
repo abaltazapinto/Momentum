@@ -58,6 +58,13 @@
                 </button>
             </header>
 
+            <form id="auth-form" class="task-form">
+                <label for="auth-email">Conta para usar noutro dispositivo</label>
+                <input type="email" id="auth-email" placeholder="Email" autocomplete="email" required>
+                <input type="password" id="auth-password" placeholder="Palavra-passe (mín. 6 caracteres)" autocomplete="current-password" minlength="6" required>
+                <button type="submit" id="auth-submit-button">Ligar conta</button>
+            </form>
+
             <form id="task-form" class="task-form">
                 <label for="task-input">Task</label>
                 <input
@@ -68,6 +75,9 @@
                     autocomplete="off"
                     required
                 >
+                <label><input type="checkbox" id="recurring-toggle"> Recorrente semanal</label>
+                <input type="number" id="recurring-target" min="1" step="1" value="3" hidden aria-label="Sessões por semana">
+                <input type="number" id="recurring-duration" min="1" step="1" value="30" hidden aria-label="Minutos por sessão">
                 <button type="submit" id="add-task-button">Add task</button>
             </form>
 

@@ -1,8 +1,12 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js"
-import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js"
-import { getDatabase, ref, push, onValue, remove, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js"
+import { getAuth, onAuthStateChanged, signInAnonymously, EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js"
+import { getDatabase, ref, push, onValue, remove, update, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js"
+import { createRecurringTask, recordCompletion, weeklyProgress, suggestReplan } from "./recurrence.js"
 
 const appSettings = {
+    apiKey: "AIzaSyDtO7WiaH5RHe5ixovVPx6U_JE1K6RmMw0",
+    authDomain: "compras-e2b70.firebaseapp.com",
+    projectId: "compras-e2b70",
     databaseURL: "https://compras-e2b70-default-rtdb.europe-west1.firebasedatabase.app"
 }
 
@@ -17,6 +21,13 @@ const addTaskButtonEl = document.getElementById("add-task-button")
 const taskStatusEl = document.getElementById("task-status")
 const taskListEl = document.getElementById("task-list")
 const themeToggleEl = document.getElementById("theme-toggle")
+const authFormEl = document.getElementById("auth-form")
+const authEmailEl = document.getElementById("auth-email")
+const authPasswordEl = document.getElementById("auth-password")
+const authSubmitEl = document.getElementById("auth-submit-button")
+const recurringToggleEl = document.getElementById("recurring-toggle")
+const recurringTargetEl = document.getElementById("recurring-target")
+const recurringDurationEl = document.getElementById("recurring-duration")
 
 const themeStorageKey = "momentum-theme"
 const lucideIconNodes = {
@@ -45,6 +56,8 @@ const state = {
     isLoadingTasks: true
 }
 
+let stopTasksSubscription = null
+
 renderTasks()
 updateThemeToggle()
 
@@ -56,14 +69,59 @@ onAuthStateChanged(auth, async function(user) {
             await signInAnonymously(auth)
         } catch (error) {
             state.isLoadingTasks = false
+            renderTasks()
             showError("Authentication is unavailable. Your tasks were not loaded.")
             console.error("Failed to authenticate:", error)
         }
         return
     }
 
+    if (stopTasksSubscription) stopTasksSubscription()
     tasksInDB = ref(database, `users/${user.uid}/tasks`)
     subscribeToTasks()
+    authFormEl.hidden = !user.isAnonymous
+})
+
+authFormEl.addEventListener("submit", async function(event) {
+    event.preventDefault()
+    const email = authEmailEl.value.trim()
+    const password = authPasswordEl.value
+    authSubmitEl.disabled = true
+    try {
+        if (auth.currentUser?.isAnonymous) {
+            const credential = EmailAuthProvider.credential(email, password)
+            await linkWithCredential(auth.currentUser, credential)
+            showInfo("Conta ligada. Podes usar este email noutro dispositivo.")
+        } else {
+            await signInWithEmailAndPassword(auth, email, password)
+            showInfo("Sessão iniciada.")
+        }
+        authFormEl.hidden = true
+    } catch (error) {
+        if (auth.currentUser?.isAnonymous && ["auth/credential-already-in-use", "auth/email-already-in-use"].includes(error.code)) {
+            try {
+                await signInWithEmailAndPassword(auth, email, password)
+                showInfo("Sessão iniciada neste dispositivo.")
+                authFormEl.hidden = true
+                return
+            } catch (signInError) { error = signInError }
+        }
+        if (error.code === "auth/user-not-found") {
+            try {
+                await createUserWithEmailAndPassword(auth, email, password)
+                showInfo("Conta criada e ligada.")
+                authFormEl.hidden = true
+                return
+            } catch (createError) { error = createError }
+        }
+        showError("Não foi possível ligar a conta. Verifica o email e a palavra-passe.")
+        console.error("Failed to link/sign in:", error)
+    } finally { authSubmitEl.disabled = false }
+})
+
+recurringToggleEl.addEventListener("change", function() {
+    recurringTargetEl.hidden = !recurringToggleEl.checked
+    recurringDurationEl.hidden = !recurringToggleEl.checked
 })
 
 requestAnimationFrame(function() {
@@ -113,12 +171,18 @@ taskFormEl.addEventListener("submit", async function(event) {
     setCreatingTask(true)
 
     try {
-        await push(tasksInDB, {
+        const task = {
             title: taskTitle,
             completed: false,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
-        })
+        }
+        if (recurringToggleEl.checked) {
+            const recurring = createRecurringTask({ id: "pending", title: taskTitle, durationMinutes: Number(recurringDurationEl.value), targetCount: Number(recurringTargetEl.value), timezone: "Atlantic/Madeira" })
+            task.recurrence = recurring.recurrence
+            task.completionEvents = []
+        }
+        await push(tasksInDB, task)
 
         clearTaskInput()
         taskInputEl.focus()
@@ -131,7 +195,7 @@ taskFormEl.addEventListener("submit", async function(event) {
 })
 
 function subscribeToTasks() {
-    onValue(tasksInDB, function(snapshot) {
+    stopTasksSubscription = onValue(tasksInDB, function(snapshot) {
     if (snapshot.exists()) {
         state.tasks = Object.entries(snapshot.val())
             .map(([taskID, value]) => normalizeTask(taskID, value))
@@ -145,6 +209,7 @@ function subscribeToTasks() {
     }, function(error) {
     state.isLoadingTasks = false
     taskListEl.textContent = ""
+    renderTasks()
     showError("We couldn't load your tasks. Please refresh and try again.")
     console.error("Failed to load tasks:", error)
     })
@@ -182,7 +247,30 @@ taskListEl.addEventListener("change", async function(event) {
     }
 })
 
+async function recordTaskSession(task) {
+    const taskRef = ref(database, `users/${auth.currentUser.uid}/tasks/${task.id}`)
+    const event = { id: crypto.randomUUID(), occurredAt: new Date().toISOString() }
+    await runTransaction(taskRef, current => {
+        if (!current || !current.recurrence) return current
+        return recordCompletion({ ...current, completionEvents: current.completionEvents || [] }, event)
+    })
+}
+
 taskListEl.addEventListener("click", async function(event) {
+    const sessionButton = event.target.closest('[data-action="record-session"]')
+    if (sessionButton) {
+        const taskEl = sessionButton.closest("[data-task-id]")
+        const task = state.tasks.find(({ id }) => id === taskEl?.dataset.taskId)
+        if (!task) return
+        sessionButton.disabled = true
+        try {
+            await recordTaskSession(task)
+        } catch (error) {
+            showError("Não foi possível registar a sessão.")
+            console.error("Failed to record session:", error)
+        } finally { sessionButton.disabled = false }
+        return
+    }
     const deleteButton = event.target.closest('[data-action="delete-task"]')
 
     if (!deleteButton) {
@@ -229,7 +317,9 @@ function normalizeTask(id, value) {
         id,
         title,
         completed: value.completed === true,
-        createdAt: typeof value.createdAt === "number" ? value.createdAt : null
+        createdAt: typeof value.createdAt === "number" ? value.createdAt : null,
+        recurrence: value.recurrence && value.recurrence.frequency === "weekly" ? value.recurrence : null,
+        completionEvents: Array.isArray(value.completionEvents) ? value.completionEvents : []
     }
 }
 
@@ -351,9 +441,30 @@ function createTaskElement(task) {
     const deleteIconEl = createLucideIcon("trash2", "task__delete-icon")
     deleteButtonEl.append(deleteIconEl)
 
-    taskEl.append(checkboxControlEl, titleEl, deleteButtonEl)
+    if (task.recurrence) {
+        const progress = weeklyProgress(task, getWeekStart())
+        const progressEl = document.createElement("span")
+        progressEl.className = "recurring-progress"
+        progressEl.textContent = `${progress.doneCount}/${progress.targetCount} · ${task.recurrence.durationMinutes} min`
+        const sessionButtonEl = document.createElement("button")
+        sessionButtonEl.className = "task__session-button"
+        sessionButtonEl.type = "button"
+        sessionButtonEl.textContent = "Registar sessão"
+        sessionButtonEl.dataset.action = "record-session"
+        taskEl.append(checkboxControlEl, titleEl, progressEl, sessionButtonEl, deleteButtonEl)
+    } else {
+        taskEl.append(checkboxControlEl, titleEl, deleteButtonEl)
+    }
 
     return taskEl
+}
+
+function getWeekStart() {
+    const date = new Date()
+    const day = date.getUTCDay() || 7
+    date.setUTCDate(date.getUTCDate() - day + 1)
+    date.setUTCHours(0, 0, 0, 0)
+    return date.toISOString()
 }
 
 function createLucideIcon(iconName, className = "") {
@@ -393,4 +504,9 @@ function clearStatus() {
 function showError(message) {
     taskStatusEl.textContent = message
     taskStatusEl.classList.add("task-status--error")
+}
+
+function showInfo(message) {
+    taskStatusEl.textContent = message
+    taskStatusEl.classList.remove("task-status--error")
 }

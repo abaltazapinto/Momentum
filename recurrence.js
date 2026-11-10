@@ -1,19 +1,17 @@
-const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000
-
 export function createRecurringTask({ id, title, durationMinutes, targetCount, timezone = "Atlantic/Madeira" }) {
-    if (!id || !title || durationMinutes <= 0 || targetCount <= 0) throw new Error("Invalid recurring task")
+    if (!id || typeof title !== "string" || !title.trim() || !Number.isFinite(durationMinutes) || durationMinutes <= 0 || !Number.isInteger(targetCount) || targetCount <= 0 || typeof timezone !== "string") throw new Error("Invalid recurring task")
     return { id, title, completed: false, recurrence: { frequency: "weekly", targetCount, durationMinutes, timezone }, completionEvents: [] }
 }
 
 export function recordCompletion(task, { eventId, occurredAt }) {
-    if (!eventId || !occurredAt) throw new Error("eventId and occurredAt are required")
+    if (!eventId || occurredAt === undefined || Number.isNaN(new Date(occurredAt).getTime())) throw new Error("eventId and occurredAt are required")
     if (task.completionEvents.some(event => event.id === eventId)) return task
     return { ...task, completionEvents: [...task.completionEvents, { id: eventId, taskId: task.id, occurredAt }] }
 }
 
 export function weeklyProgress(task, weekStart) {
     const start = new Date(weekStart).getTime()
-    const end = start + MS_PER_WEEK
+    const end = new Date(new Date(weekStart).getTime() + 7 * 24 * 60 * 60 * 1000).getTime()
     const count = task.completionEvents.filter(event => {
         const timestamp = new Date(event.occurredAt).getTime()
         return timestamp >= start && timestamp < end
