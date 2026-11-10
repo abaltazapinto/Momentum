@@ -15,7 +15,7 @@ A modern productivity application focused on helping users move forward one task
 
 ## Authentication and recurring tasks
 
-New data is scoped to `users/{uid}/tasks` and requires Firebase Authentication. The
+New data is scoped to `users/{uid}/tasks` and requires Firebase Authentication.
 The current browser flow starts anonymously and can link that same Firebase UID to an
 email/password account. This preserves the tasks created before linking and lets the
 same user recover them on another device. No service-account key is stored in the app.
