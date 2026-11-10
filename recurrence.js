@@ -1,0 +1,28 @@
+const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000
+
+export function createRecurringTask({ id, title, durationMinutes, targetCount, timezone = "Atlantic/Madeira" }) {
+    if (!id || !title || durationMinutes <= 0 || targetCount <= 0) throw new Error("Invalid recurring task")
+    return { id, title, completed: false, recurrence: { frequency: "weekly", targetCount, durationMinutes, timezone }, completionEvents: [] }
+}
+
+export function recordCompletion(task, { eventId, occurredAt }) {
+    if (!eventId || !occurredAt) throw new Error("eventId and occurredAt are required")
+    if (task.completionEvents.some(event => event.id === eventId)) return task
+    return { ...task, completionEvents: [...task.completionEvents, { id: eventId, taskId: task.id, occurredAt }] }
+}
+
+export function weeklyProgress(task, weekStart) {
+    const start = new Date(weekStart).getTime()
+    const end = start + MS_PER_WEEK
+    const count = task.completionEvents.filter(event => {
+        const timestamp = new Date(event.occurredAt).getTime()
+        return timestamp >= start && timestamp < end
+    }).length
+    return { doneCount: count, targetCount: task.recurrence.targetCount, remaining: Math.max(task.recurrence.targetCount - count, 0) }
+}
+
+export function suggestReplan(task, weekStart) {
+    const progress = weeklyProgress(task, weekStart)
+    if (!progress.remaining) return null
+    return { kind: "replan", taskId: task.id, message: `Ainda tens ${progress.remaining} sessão(ões) de ${task.title} pendente(s) esta semana. Queres reservar ${task.recurrence.durationMinutes} minutos ou adiar?`, progress }
+}

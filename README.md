@@ -13,6 +13,20 @@ A modern productivity application focused on helping users move forward one task
 - ✅ PWA ready
 - ✅ Mobile friendly
 
+## Authentication and recurring tasks
+
+New data is scoped to `users/{uid}/tasks` and requires Firebase Authentication. The
+current browser flow signs in anonymously, so no token or service-account key is
+stored in the app. Deploy `firebase.database.rules.json` in the Firebase Console
+before using the integration; the repository cannot verify the effective production
+rules or migrate existing `/tasks` data automatically.
+
+`recurrence.js` contains the pure recurring-task model: one stable task definition,
+dated completion events, idempotent session recording, weekly progress and a
+replanning suggestion. It never creates calendar events.
+
+Run `npm test` for the deterministic LeetCode 3x/week end-to-end fixture.
+
 ---
 
 ## Live Demo

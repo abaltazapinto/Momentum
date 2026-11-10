@@ -1,11 +1,13 @@
 {
   "name": "Scrim-s04hv56",
   "description": "https://v2.scrimba.com/learn-javascript-c0v/~06j",
+  "type": "module",
   "scripts": {
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node recurrence.test.js"
   },
   "dependencies": {
     "vite": "latest"

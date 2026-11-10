@@ -1,4 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js"
+import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js"
 import { getDatabase, ref, push, onValue, remove, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js"
 
 const appSettings = {
@@ -6,8 +7,9 @@ const appSettings = {
 }
 
 const app = initializeApp(appSettings)
+const auth = getAuth(app)
 const database = getDatabase(app)
-const tasksInDB = ref(database, "tasks")
+let tasksInDB = null
 
 const taskFormEl = document.getElementById("task-form")
 const taskInputEl = document.getElementById("task-input")
@@ -46,6 +48,24 @@ const state = {
 renderTasks()
 updateThemeToggle()
 
+onAuthStateChanged(auth, async function(user) {
+    if (!user) {
+        state.isLoadingTasks = true
+        renderTasks()
+        try {
+            await signInAnonymously(auth)
+        } catch (error) {
+            state.isLoadingTasks = false
+            showError("Authentication is unavailable. Your tasks were not loaded.")
+            console.error("Failed to authenticate:", error)
+        }
+        return
+    }
+
+    tasksInDB = ref(database, `users/${user.uid}/tasks`)
+    subscribeToTasks()
+})
+
 requestAnimationFrame(function() {
     document.documentElement.classList.add("theme-ready")
 })
@@ -78,6 +98,11 @@ taskFormEl.addEventListener("submit", async function(event) {
         return
     }
 
+    if (!tasksInDB || !auth.currentUser) {
+        showError("Authentication is still starting. Please try again in a moment.")
+        return
+    }
+
     if (!taskTitle) {
         showError("Please enter a task.")
         taskInputEl.focus()
@@ -105,7 +130,8 @@ taskFormEl.addEventListener("submit", async function(event) {
     }
 })
 
-onValue(tasksInDB, function(snapshot) {
+function subscribeToTasks() {
+    onValue(tasksInDB, function(snapshot) {
     if (snapshot.exists()) {
         state.tasks = Object.entries(snapshot.val())
             .map(([taskID, value]) => normalizeTask(taskID, value))
@@ -116,12 +142,13 @@ onValue(tasksInDB, function(snapshot) {
 
     state.isLoadingTasks = false
     renderTasks()
-}, function(error) {
+    }, function(error) {
     state.isLoadingTasks = false
     taskListEl.textContent = ""
     showError("We couldn't load your tasks. Please refresh and try again.")
     console.error("Failed to load tasks:", error)
-})
+    })
+}
 
 taskListEl.addEventListener("change", async function(event) {
     const checkbox = event.target.closest('[data-action="toggle-task"]')
@@ -141,7 +168,7 @@ taskListEl.addEventListener("change", async function(event) {
     clearStatus()
 
     try {
-        await update(ref(database, `tasks/${task.id}`), {
+        await update(ref(database, `users/${auth.currentUser.uid}/tasks/${task.id}`), {
             title: task.title,
             completed: checkbox.checked,
             createdAt: task.createdAt ?? serverTimestamp(),
@@ -173,7 +200,7 @@ taskListEl.addEventListener("click", async function(event) {
     clearStatus()
 
     try {
-        await remove(ref(database, `tasks/${taskID}`))
+        await remove(ref(database, `users/${auth.currentUser.uid}/tasks/${taskID}`))
     } catch (error) {
         deleteButton.disabled = false
         showError("We couldn't delete that task. Please try again.")
