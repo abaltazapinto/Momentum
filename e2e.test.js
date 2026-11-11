@@ -23,11 +23,12 @@ db.create(userA, oldTask)
 db.create(userA, leetCode)
 
 // 1. Create task and record one session through the authenticated user path.
-db.transaction(userA, "leetcode", current => recordCompletion(current, { eventId: "session-1", occurredAt: "2026-11-10T18:00:00Z" }))
+db.transaction(userA, "leetcode", current => recordCompletion(current, { taskId: "leetcode", eventId: "session-1", occurredAt: "2026-11-10T18:00:00Z" }))
 
 // 2. Reopen: a fresh read for the same UID keeps 1/3 and the prior task.
 const reopened = db.read(userA)
 const reopenedLeetCode = reopened.find(task => task.id === "leetcode")
+assert.equal(reopenedLeetCode.completionEvents[0].taskId, "leetcode")
 assert.deepEqual(weeklyProgress(reopenedLeetCode, "2026-11-09T00:00:00Z"), { doneCount: 1, targetCount: 3, remaining: 2 })
 assert.ok(reopened.some(task => task.id === "old-task"), "previous task must remain")
 

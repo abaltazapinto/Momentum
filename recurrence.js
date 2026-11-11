@@ -3,10 +3,10 @@ export function createRecurringTask({ id, title, durationMinutes, targetCount, t
     return { id, title, completed: false, recurrence: { frequency: "weekly", targetCount, durationMinutes, timezone }, completionEvents: [] }
 }
 
-export function recordCompletion(task, { eventId, occurredAt }) {
-    if (!eventId || occurredAt === undefined || Number.isNaN(new Date(occurredAt).getTime())) throw new Error("eventId and occurredAt are required")
+export function recordCompletion(task, { taskId, eventId, occurredAt }) {
+    if (!taskId || !eventId || occurredAt === undefined || Number.isNaN(new Date(occurredAt).getTime())) throw new Error("taskId, eventId and occurredAt are required")
     if (task.completionEvents.some(event => event.id === eventId)) return task
-    return { ...task, completionEvents: [...task.completionEvents, { id: eventId, taskId: task.id, occurredAt }] }
+    return { ...task, completionEvents: [...task.completionEvents, { id: eventId, taskId, occurredAt }] }
 }
 
 export function weeklyProgress(task, weekStart) {
@@ -17,6 +17,16 @@ export function weeklyProgress(task, weekStart) {
         return timestamp >= start && timestamp < end
     }).length
     return { doneCount: count, targetCount: task.recurrence.targetCount, remaining: Math.max(task.recurrence.targetCount - count, 0) }
+}
+
+export function getWeekStartForInstant(instant, timezone) {
+    const date = new Date(parseInstant(instant))
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, weekday: "short", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date)
+    const values = Object.fromEntries(parts.filter(part => part.type !== "literal").map(part => [part.type, part.value]))
+    const local = new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day)))
+    const day = local.getUTCDay() || 7
+    local.setUTCDate(local.getUTCDate() - day + 1)
+    return new Date(zonedMidnightToInstant(local, timezone)).toISOString()
 }
 
 function parseInstant(value) {

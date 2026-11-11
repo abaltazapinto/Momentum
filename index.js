@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js"
 import { getAuth, onAuthStateChanged, signInAnonymously, EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js"
 import { getDatabase, ref, push, onValue, remove, update, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js"
-import { createRecurringTask, recordCompletion, weeklyProgress, suggestReplan } from "./recurrence.js"
+import { createRecurringTask, recordCompletion, weeklyProgress, suggestReplan, getWeekStartForInstant } from "./recurrence.js"
 
 const appSettings = {
     apiKey: "AIzaSyDtO7WiaH5RHe5ixovVPx6U_JE1K6RmMw0",
@@ -253,7 +253,7 @@ async function recordTaskSession(task) {
     const event = { eventId: crypto.randomUUID(), occurredAt: new Date().toISOString() }
     await runTransaction(taskRef, current => {
         if (!current || !current.recurrence) return current
-        return recordCompletion({ ...current, completionEvents: current.completionEvents || [] }, event)
+        return recordCompletion({ ...current, completionEvents: current.completionEvents || [] }, { ...event, taskId: task.id })
     })
 }
 
@@ -464,13 +464,7 @@ function createTaskElement(task) {
 }
 
 function getWeekStart() {
-    const now = new Date()
-    const formatter = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Lisbon", weekday: "short", year: "numeric", month: "2-digit", day: "2-digit" })
-    const parts = Object.fromEntries(formatter.formatToParts(now).filter(part => part.type !== "literal").map(part => [part.type, part.value]))
-    const local = new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)))
-    const day = local.getUTCDay() || 7
-    local.setUTCDate(local.getUTCDate() - day + 1)
-    return local.toISOString()
+    return getWeekStartForInstant(new Date().toISOString(), "Europe/Lisbon")
 }
 
 function createLucideIcon(iconName, className = "") {
