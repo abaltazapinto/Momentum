@@ -10,13 +10,36 @@ export function recordCompletion(task, { eventId, occurredAt }) {
 }
 
 export function weeklyProgress(task, weekStart) {
-    const start = new Date(weekStart).getTime()
-    const end = new Date(new Date(weekStart).getTime() + 7 * 24 * 60 * 60 * 1000).getTime()
+    const start = parseInstant(weekStart)
+    const end = nextLocalWeekBoundary(weekStart, task.recurrence.timezone)
     const count = task.completionEvents.filter(event => {
         const timestamp = new Date(event.occurredAt).getTime()
         return timestamp >= start && timestamp < end
     }).length
     return { doneCount: count, targetCount: task.recurrence.targetCount, remaining: Math.max(task.recurrence.targetCount - count, 0) }
+}
+
+function parseInstant(value) {
+    const timestamp = new Date(value).getTime()
+    if (Number.isNaN(timestamp)) throw new Error("weekStart must be a valid date")
+    return timestamp
+}
+
+function nextLocalWeekBoundary(weekStart, timezone) {
+    const date = new Date(parseInstant(weekStart))
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, weekday: "short", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).formatToParts(date)
+    const values = Object.fromEntries(parts.filter(part => part.type !== "literal").map(part => [part.type, part.value]))
+    const local = new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day), 0, 0, 0))
+    local.setUTCDate(local.getUTCDate() + 7)
+    return zonedMidnightToInstant(local, timezone)
+}
+
+function zonedMidnightToInstant(localDate, timezone) {
+    const guess = localDate.getTime()
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).formatToParts(new Date(guess))
+    const values = Object.fromEntries(parts.filter(part => part.type !== "literal").map(part => [part.type, part.value]))
+    const rendered = Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day), Number(values.hour), Number(values.minute), Number(values.second))
+    return guess - (rendered - guess)
 }
 
 export function suggestReplan(task, weekStart) {

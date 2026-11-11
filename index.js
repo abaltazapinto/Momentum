@@ -57,6 +57,7 @@ const state = {
 }
 
 let stopTasksSubscription = null
+const sessionInFlight = new Set()
 
 renderTasks()
 updateThemeToggle()
@@ -249,7 +250,7 @@ taskListEl.addEventListener("change", async function(event) {
 
 async function recordTaskSession(task) {
     const taskRef = ref(database, `users/${auth.currentUser.uid}/tasks/${task.id}`)
-    const event = { id: crypto.randomUUID(), occurredAt: new Date().toISOString() }
+    const event = { eventId: crypto.randomUUID(), occurredAt: new Date().toISOString() }
     await runTransaction(taskRef, current => {
         if (!current || !current.recurrence) return current
         return recordCompletion({ ...current, completionEvents: current.completionEvents || [] }, event)
@@ -262,6 +263,8 @@ taskListEl.addEventListener("click", async function(event) {
         const taskEl = sessionButton.closest("[data-task-id]")
         const task = state.tasks.find(({ id }) => id === taskEl?.dataset.taskId)
         if (!task) return
+        if (sessionInFlight.has(task.id)) return
+        sessionInFlight.add(task.id)
         sessionButton.disabled = true
         try {
             await recordTaskSession(task)
@@ -269,6 +272,7 @@ taskListEl.addEventListener("click", async function(event) {
             showError("Não foi possível registar a sessão.")
             console.error("Failed to record session:", error)
         } finally { sessionButton.disabled = false }
+        sessionInFlight.delete(task.id)
         return
     }
     const deleteButton = event.target.closest('[data-action="delete-task"]')
@@ -460,11 +464,13 @@ function createTaskElement(task) {
 }
 
 function getWeekStart() {
-    const date = new Date()
-    const day = date.getUTCDay() || 7
-    date.setUTCDate(date.getUTCDate() - day + 1)
-    date.setUTCHours(0, 0, 0, 0)
-    return date.toISOString()
+    const now = new Date()
+    const formatter = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Lisbon", weekday: "short", year: "numeric", month: "2-digit", day: "2-digit" })
+    const parts = Object.fromEntries(formatter.formatToParts(now).filter(part => part.type !== "literal").map(part => [part.type, part.value]))
+    const local = new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)))
+    const day = local.getUTCDay() || 7
+    local.setUTCDate(local.getUTCDate() - day + 1)
+    return local.toISOString()
 }
 
 function createLucideIcon(iconName, className = "") {
