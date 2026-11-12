@@ -2,6 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebas
 import { getAuth, onAuthStateChanged, signInAnonymously, EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js"
 import { getDatabase, ref, push, onValue, remove, update, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js"
 import { createRecurringTask, recordCompletion, weeklyProgress, suggestReplan, getWeekStartForInstant } from "./recurrence.js"
+import { authStatusForAnonymousFailure, taskSubmissionMessage } from "./auth-state.js"
 
 const appSettings = {
     apiKey: "AIzaSyDtO7WiaH5RHe5ixovVPx6U_JE1K6RmMw0",
@@ -53,7 +54,8 @@ const lucideIconNodes = {
 const state = {
     tasks: [],
     isCreatingTask: false,
-    isLoadingTasks: true
+    isLoadingTasks: true,
+    authStatus: "starting"
 }
 
 let stopTasksSubscription = null
@@ -64,23 +66,37 @@ updateThemeToggle()
 
 onAuthStateChanged(auth, async function(user) {
     if (!user) {
+        state.authStatus = "anonymous-sign-in"
+        tasksInDB = null
+        state.tasks = []
         state.isLoadingTasks = true
         renderTasks()
         try {
             await signInAnonymously(auth)
         } catch (error) {
+            state.authStatus = authStatusForAnonymousFailure()
             state.isLoadingTasks = false
             renderTasks()
-            showError("Authentication is unavailable. Your tasks were not loaded.")
+            showError("Authentication is unavailable. Sign in with your email to recover your tasks.")
             console.error("Failed to authenticate:", error)
         }
         return
     }
 
     if (stopTasksSubscription) stopTasksSubscription()
+    state.authStatus = "authenticated"
     tasksInDB = ref(database, `users/${user.uid}/tasks`)
     subscribeToTasks()
     authFormEl.hidden = !user.isAnonymous
+}, function(error) {
+    state.authStatus = "error"
+    tasksInDB = null
+    state.tasks = []
+    state.isLoadingTasks = false
+    authFormEl.hidden = false
+    renderTasks()
+    showError("Authentication could not start. Sign in with your email to recover your tasks.")
+    console.error("Firebase Authentication failed to initialize:", error)
 })
 
 authFormEl.addEventListener("submit", async function(event) {
@@ -158,7 +174,7 @@ taskFormEl.addEventListener("submit", async function(event) {
     }
 
     if (!tasksInDB || !auth.currentUser) {
-        showError("Authentication is still starting. Please try again in a moment.")
+        showError(taskSubmissionMessage(state.authStatus))
         return
     }
 
