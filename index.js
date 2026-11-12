@@ -2,6 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebas
 import { getAuth, onAuthStateChanged, signInAnonymously, EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js"
 import { getDatabase, ref, push, onValue, remove, update, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js"
 import { createRecurringTask, recordCompletion, weeklyProgress, suggestReplan, getWeekStartForInstant } from "./recurrence.js"
+import { authStatusForAnonymousFailure, taskSubmissionMessage, taskListState } from "./auth-state.js"
 
 const appSettings = {
     apiKey: "AIzaSyDtO7WiaH5RHe5ixovVPx6U_JE1K6RmMw0",
@@ -53,7 +54,9 @@ const lucideIconNodes = {
 const state = {
     tasks: [],
     isCreatingTask: false,
-    isLoadingTasks: true
+    isLoadingTasks: true,
+    authStatus: "starting",
+    taskStatus: "loading"
 }
 
 let stopTasksSubscription = null
@@ -64,23 +67,39 @@ updateThemeToggle()
 
 onAuthStateChanged(auth, async function(user) {
     if (!user) {
+        stopTaskSubscription()
+        state.authStatus = "anonymous-sign-in"
+        tasksInDB = null
+        state.tasks = []
         state.isLoadingTasks = true
+        state.taskStatus = "loading"
+        authFormEl.hidden = false
         renderTasks()
         try {
             await signInAnonymously(auth)
         } catch (error) {
+            state.authStatus = authStatusForAnonymousFailure()
             state.isLoadingTasks = false
+            state.taskStatus = "unavailable"
             renderTasks()
-            showError("Authentication is unavailable. Your tasks were not loaded.")
+            showError("Authentication is unavailable. Sign in with your email to recover your tasks.")
             console.error("Failed to authenticate:", error)
         }
         return
     }
 
-    if (stopTasksSubscription) stopTasksSubscription()
-    tasksInDB = ref(database, `users/${user.uid}/tasks`)
-    subscribeToTasks()
-    authFormEl.hidden = !user.isAnonymous
+    startTaskSession(user)
+}, function(error) {
+    stopTaskSubscription()
+    state.authStatus = "error"
+    tasksInDB = null
+    state.tasks = []
+    state.isLoadingTasks = false
+    state.taskStatus = "unavailable"
+    authFormEl.hidden = false
+    renderTasks()
+    showError("Authentication could not start. Sign in with your email to recover your tasks.")
+    console.error("Firebase Authentication failed to initialize:", error)
 })
 
 authFormEl.addEventListener("submit", async function(event) {
@@ -97,12 +116,14 @@ authFormEl.addEventListener("submit", async function(event) {
             await signInWithEmailAndPassword(auth, email, password)
             showInfo("Sessão iniciada.")
         }
+        startTaskSession(auth.currentUser)
         authFormEl.hidden = true
     } catch (error) {
         if (auth.currentUser?.isAnonymous && ["auth/credential-already-in-use", "auth/email-already-in-use"].includes(error.code)) {
             try {
                 await signInWithEmailAndPassword(auth, email, password)
                 showInfo("Sessão iniciada neste dispositivo.")
+                startTaskSession(auth.currentUser)
                 authFormEl.hidden = true
                 return
             } catch (signInError) { error = signInError }
@@ -111,6 +132,7 @@ authFormEl.addEventListener("submit", async function(event) {
             try {
                 await createUserWithEmailAndPassword(auth, email, password)
                 showInfo("Conta criada e ligada.")
+                startTaskSession(auth.currentUser)
                 authFormEl.hidden = true
                 return
             } catch (createError) { error = createError }
@@ -158,7 +180,7 @@ taskFormEl.addEventListener("submit", async function(event) {
     }
 
     if (!tasksInDB || !auth.currentUser) {
-        showError("Authentication is still starting. Please try again in a moment.")
+        showError(taskSubmissionMessage(state.authStatus))
         return
     }
 
@@ -206,14 +228,33 @@ function subscribeToTasks() {
     }
 
     state.isLoadingTasks = false
+    state.taskStatus = "ready"
     renderTasks()
     }, function(error) {
     state.isLoadingTasks = false
+    state.taskStatus = "unavailable"
     taskListEl.textContent = ""
     renderTasks()
     showError("We couldn't load your tasks. Please refresh and try again.")
     console.error("Failed to load tasks:", error)
     })
+}
+
+function startTaskSession(user) {
+    if (!user) return
+    stopTaskSubscription()
+    state.authStatus = "authenticated"
+    state.isLoadingTasks = true
+    state.taskStatus = "loading"
+    tasksInDB = ref(database, `users/${user.uid}/tasks`)
+    authFormEl.hidden = !user.isAnonymous
+    subscribeToTasks()
+    renderTasks()
+}
+
+function stopTaskSubscription() {
+    if (stopTasksSubscription) stopTasksSubscription()
+    stopTasksSubscription = null
 }
 
 taskListEl.addEventListener("change", async function(event) {
@@ -341,8 +382,14 @@ function updateThemeToggle() {
 function renderTasks() {
     taskListEl.textContent = ""
 
-    if (state.isLoadingTasks) {
+    const listState = taskListState(state)
+    if (listState === "loading") {
         taskListEl.append(createLoadingStateElement())
+        return
+    }
+
+    if (listState === "unavailable") {
+        taskListEl.append(createUnavailableStateElement())
         return
     }
 
@@ -358,6 +405,23 @@ function renderTasks() {
     }
 
     taskListEl.append(fragment)
+}
+
+function createUnavailableStateElement() {
+    const unavailableStateEl = document.createElement("li")
+    unavailableStateEl.className = "task-list__empty task-list__unavailable"
+    unavailableStateEl.setAttribute("role", "alert")
+
+    const titleEl = document.createElement("h2")
+    titleEl.className = "task-list__empty-title"
+    titleEl.textContent = "Tasks unavailable"
+
+    const messageEl = document.createElement("p")
+    messageEl.className = "task-list__empty-message"
+    messageEl.textContent = "Sign in with your email or try again to recover your tasks."
+
+    unavailableStateEl.append(titleEl, messageEl)
+    return unavailableStateEl
 }
 
 function createLoadingStateElement() {
