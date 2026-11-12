@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { authStatusForAnonymousFailure, taskListState, taskSubmissionMessage } from "../auth-state.js"
+import { authStatusForAnonymousFailure, googleAuthErrorMessage, taskListState, taskSubmissionMessage } from "../auth-state.js"
 
 test("anonymous auth failure is terminal but recoverable through email sign-in", () => {
     assert.equal(authStatusForAnonymousFailure(), "error")
@@ -17,4 +17,16 @@ test("task list distinguishes unavailable data from an empty, ready list", () =>
     assert.equal(taskListState({ authStatus: "error", isLoadingTasks: false, taskStatus: "unavailable" }), "unavailable")
     assert.equal(taskListState({ authStatus: "authenticated", isLoadingTasks: false, taskStatus: "ready" }), "ready")
     assert.equal(taskListState({ authStatus: "authenticated", isLoadingTasks: true, taskStatus: "loading" }), "loading")
+})
+
+test("Google provider conflicts never suggest an automatic merge", () => {
+    const message = googleAuthErrorMessage("auth/credential-already-in-use")
+    assert.match(message, /já está ligada a outro utilizador/i)
+    assert.match(message, /não foram misturadas/i)
+})
+
+test("Google popup errors have safe user-facing messages", () => {
+    assert.match(googleAuthErrorMessage("auth/popup-closed-by-user"), /cancelado/i)
+    assert.match(googleAuthErrorMessage("auth/operation-not-allowed"), /não está ativo/i)
+    assert.doesNotMatch(googleAuthErrorMessage("auth/popup-blocked"), /auth\//i)
 })

@@ -1,8 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js"
-import { getAuth, onAuthStateChanged, signInAnonymously, EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js"
+import { getAuth, onAuthStateChanged, signInAnonymously, EmailAuthProvider, GoogleAuthProvider, linkWithCredential, linkWithPopup, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js"
 import { getDatabase, ref, push, onValue, remove, update, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js"
 import { createRecurringTask, recordCompletion, weeklyProgress, suggestReplan, getWeekStartForInstant } from "./recurrence.js"
-import { authStatusForAnonymousFailure, taskSubmissionMessage, taskListState } from "./auth-state.js"
+import { authStatusForAnonymousFailure, googleAuthErrorMessage, taskSubmissionMessage, taskListState } from "./auth-state.js"
 
 const appSettings = {
     apiKey: "AIzaSyDtO7WiaH5RHe5ixovVPx6U_JE1K6RmMw0",
@@ -14,6 +14,7 @@ const appSettings = {
 const app = initializeApp(appSettings)
 const auth = getAuth(app)
 const database = getDatabase(app)
+const googleProvider = new GoogleAuthProvider()
 let tasksInDB = null
 
 const taskFormEl = document.getElementById("task-form")
@@ -26,6 +27,7 @@ const authFormEl = document.getElementById("auth-form")
 const authEmailEl = document.getElementById("auth-email")
 const authPasswordEl = document.getElementById("auth-password")
 const authSubmitEl = document.getElementById("auth-submit-button")
+const googleSignInButtonEl = document.getElementById("google-sign-in-button")
 const recurringToggleEl = document.getElementById("recurring-toggle")
 const recurringTargetEl = document.getElementById("recurring-target")
 const recurringDurationEl = document.getElementById("recurring-duration")
@@ -140,6 +142,26 @@ authFormEl.addEventListener("submit", async function(event) {
         showError("Não foi possível ligar a conta. Verifica o email e a palavra-passe.")
         console.error("Failed to link/sign in:", error)
     } finally { authSubmitEl.disabled = false }
+})
+
+googleSignInButtonEl.addEventListener("click", async function() {
+    googleSignInButtonEl.disabled = true
+    clearStatus()
+    try {
+        if (auth.currentUser?.isAnonymous) {
+            await linkWithPopup(auth.currentUser, googleProvider)
+            showInfo("Conta Google ligada. As tuas tarefas foram preservadas.")
+        } else {
+            await signInWithPopup(auth, googleProvider)
+            showInfo("Sessão Google iniciada.")
+        }
+        startTaskSession(auth.currentUser)
+    } catch (error) {
+        showError(googleAuthErrorMessage(error.code))
+        console.error("Failed to sign in with Google:", error)
+    } finally {
+        googleSignInButtonEl.disabled = false
+    }
 })
 
 recurringToggleEl.addEventListener("change", function() {
