@@ -1,13 +1,20 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { authStatusForAnonymousFailure, taskSubmissionMessage } from "../auth-state.js"
+import { authStatusForAnonymousFailure, taskListState, taskSubmissionMessage } from "../auth-state.js"
 
 test("anonymous auth failure is terminal but recoverable through email sign-in", () => {
     assert.equal(authStatusForAnonymousFailure(), "error")
-    assert.match(taskSubmissionMessage("error"), /email/i)
+    assert.equal(taskSubmissionMessage("error"), "Authentication is unavailable. Sign in with your email to recover your tasks.")
+    assert.doesNotMatch(taskSubmissionMessage("error"), /starting/i)
 })
 
 test("task submission keeps the startup message only while auth is starting", () => {
-    assert.match(taskSubmissionMessage("starting"), /starting/i)
-    assert.match(taskSubmissionMessage("anonymous-sign-in"), /starting/i)
+    assert.equal(taskSubmissionMessage("starting"), "Authentication is still starting. Please try again in a moment.")
+    assert.equal(taskSubmissionMessage("anonymous-sign-in"), "Authentication is still starting. Please try again in a moment.")
+})
+
+test("task list distinguishes unavailable data from an empty, ready list", () => {
+    assert.equal(taskListState({ authStatus: "error", isLoadingTasks: false, taskStatus: "unavailable" }), "unavailable")
+    assert.equal(taskListState({ authStatus: "authenticated", isLoadingTasks: false, taskStatus: "ready" }), "ready")
+    assert.equal(taskListState({ authStatus: "authenticated", isLoadingTasks: true, taskStatus: "loading" }), "loading")
 })
