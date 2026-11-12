@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { authStatusForAnonymousFailure, googleAuthErrorMessage, taskListState, taskSubmissionMessage } from "../auth-state.js"
+import { authStatusForAnonymousFailure, googleAuthAction, googleAuthErrorMessage, taskListState, taskSubmissionMessage } from "../auth-state.js"
 
 test("anonymous auth failure is terminal but recoverable through email sign-in", () => {
     assert.equal(authStatusForAnonymousFailure(), "error")
@@ -23,10 +23,19 @@ test("Google provider conflicts never suggest an automatic merge", () => {
     const message = googleAuthErrorMessage("auth/credential-already-in-use")
     assert.match(message, /já está ligada a outro utilizador/i)
     assert.match(message, /não foram misturadas/i)
+    assert.doesNotMatch(message, /merge automático|mistura automática|automaticamente/i)
 })
 
 test("Google popup errors have safe user-facing messages", () => {
     assert.match(googleAuthErrorMessage("auth/popup-closed-by-user"), /cancelado/i)
     assert.match(googleAuthErrorMessage("auth/operation-not-allowed"), /não está ativo/i)
     assert.doesNotMatch(googleAuthErrorMessage("auth/popup-blocked"), /auth\//i)
+    assert.notEqual(googleAuthErrorMessage("auth/popup-blocked").trim(), "")
+})
+
+test("Google Sign-In waits for Auth initialization and supports explicit existing-account login", () => {
+    assert.equal(googleAuthAction({ authReady: false, isAnonymous: true }), "wait")
+    assert.equal(googleAuthAction({ authReady: true, isAnonymous: true }), "link")
+    assert.equal(googleAuthAction({ authReady: true, isAnonymous: false }), "sign-in")
+    assert.equal(googleAuthAction({ authReady: true, isAnonymous: true, existingAccountConflict: true }), "sign-in-existing")
 })

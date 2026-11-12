@@ -27,3 +27,9 @@ export function googleAuthErrorMessage(code) {
     }
     return messages[code] || "Não foi possível iniciar sessão com Google. Tenta novamente."
 }
+
+export function googleAuthAction({ authReady, isAnonymous, existingAccountConflict = false }) {
+    if (!authReady) return "wait"
+    if (existingAccountConflict) return "sign-in-existing"
+    return isAnonymous ? "link" : "sign-in"
+}
