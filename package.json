@@ -1,14 +1,21 @@
 {
   "name": "Scrim-s04hv56",
   "description": "https://v2.scrimba.com/learn-javascript-c0v/~06j",
+  "type": "module",
   "scripts": {
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node recurrence.test.js && node e2e.test.js && node --test tests/migrate-legacy-tasks.test.mjs tests/recurrence-dst.test.mjs",
+    "test:firebase": "firebase emulators:exec --only auth,database --project demo-momentum \"node --test tests/firebase-emulator.test.mjs\"",
+    "prepare:migration": "node scripts/migrate-legacy-tasks.mjs"
   },
   "dependencies": {
     "vite": "latest"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "firebase": "^13.3.0",
+    "firebase-tools": "^15.35.0"
+  }
 }

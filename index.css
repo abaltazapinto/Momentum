@@ -118,6 +118,12 @@ html, body {
     width: 100%;
 }
 
+#auth-form { margin-bottom: 1rem; }
+#auth-form button { white-space: nowrap; }
+#auth-form input { min-width: 0; }
+.recurring-progress { font-size: 0.85rem; opacity: 0.75; }
+.task__session-button { margin-left: auto; }
+
 .task-form label {
     font-weight: bold;
     margin-bottom: 6px;
