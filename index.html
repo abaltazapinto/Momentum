@@ -97,9 +97,17 @@
                     autocomplete="off"
                     required
                 >
-                <label><input type="checkbox" id="recurring-toggle"> Recorrente semanal</label>
-                <label for="recurring-target" id="recurring-target-label" hidden>Vezes por semana</label>
-                <input type="number" id="recurring-target" min="1" step="1" value="3" hidden>
+                <label><input type="checkbox" id="recurring-toggle"> Recorrente</label>
+                <fieldset id="recurring-options" class="recurring-options" hidden>
+                    <legend class="visually-hidden">Repete</legend>
+                    <div class="frequency-choice">
+                        <label><input type="radio" name="recurring-frequency" value="weekly" checked><span>Semanal</span></label>
+                        <label><input type="radio" name="recurring-frequency" value="monthly"><span>Mensal</span></label>
+                        <label><input type="radio" name="recurring-frequency" value="yearly"><span>Anual</span></label>
+                    </div>
+                    <label for="recurring-target" id="recurring-target-label">Vezes por semana</label>
+                    <input type="number" id="recurring-target" min="1" step="1" value="3">
+                </fieldset>
                 <button type="submit" id="add-task-button">Adicionar tarefa</button>
             </form>
 

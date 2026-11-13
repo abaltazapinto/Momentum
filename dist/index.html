@@ -28,8 +28,8 @@
         <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16-RKmhXvh6.png">
         <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon-CS7a2kyM.png">
         <link rel="manifest" href="/assets/site-BNHCqK-M.webmanifest">
-      <script type="module" crossorigin src="/assets/index-Bz8S__Yc.js"></script>
-      <link rel="stylesheet" crossorigin href="/assets/index-XssokHrR.css">
+      <script type="module" crossorigin src="/assets/index-o6IZXNVF.js"></script>
+      <link rel="stylesheet" crossorigin href="/assets/index-BoWP-bil.css">
     </head>
     <body>
         <main class="container">
@@ -98,9 +98,17 @@
                     autocomplete="off"
                     required
                 >
-                <label><input type="checkbox" id="recurring-toggle"> Recorrente semanal</label>
-                <label for="recurring-target" id="recurring-target-label" hidden>Vezes por semana</label>
-                <input type="number" id="recurring-target" min="1" step="1" value="3" hidden>
+                <label><input type="checkbox" id="recurring-toggle"> Recorrente</label>
+                <fieldset id="recurring-options" class="recurring-options" hidden>
+                    <legend class="visually-hidden">Repete</legend>
+                    <div class="frequency-choice">
+                        <label><input type="radio" name="recurring-frequency" value="weekly" checked><span>Semanal</span></label>
+                        <label><input type="radio" name="recurring-frequency" value="monthly"><span>Mensal</span></label>
+                        <label><input type="radio" name="recurring-frequency" value="yearly"><span>Anual</span></label>
+                    </div>
+                    <label for="recurring-target" id="recurring-target-label">Vezes por semana</label>
+                    <input type="number" id="recurring-target" min="1" step="1" value="3">
+                </fieldset>
                 <button type="submit" id="add-task-button">Adicionar tarefa</button>
             </form>
 
