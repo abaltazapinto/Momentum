@@ -37,11 +37,10 @@ Email **Entrar** and **Criar conta** are explicit actions; account creation does
 on a `user-not-found` error. Existing anonymous sessions can still be linked. Switching
 from an anonymous session preserves a local copy first; a cancelled social popup does
 not sign the user out. Signed-in tasks are scoped to `users/{uid}/tasks`.
-After login, **Recuperar tarefas antigas** reads `/tasks` through the authenticated SDK
-and copies missing records into the current account. **Importar cópia** accepts a JSON
-backup when the legacy path is no longer readable. Existing account records and the
-original list are never overwritten. Any earlier browser backup can also be imported
-after login; it is not used as an unauthenticated task session.
+After login, the two small icons next to **Sair** export all tasks (with their session
+history) as JSON and import a JSON backup. Import copies only missing records into the
+current account; existing records are never overwritten. The legacy `/tasks` list was
+already recovered; it stays read-only (see `docs/LEGACY_TASK_MIGRATION.md`).
 
 `firebase.database.rules.json` is deployed to `compras-e2b70`
 (`npx firebase deploy --only database --project compras-e2b70`). Everything is closed by

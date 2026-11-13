@@ -28,8 +28,8 @@
         <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16-RKmhXvh6.png">
         <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon-CS7a2kyM.png">
         <link rel="manifest" href="/assets/site-BNHCqK-M.webmanifest">
-      <script type="module" crossorigin src="/assets/index-o6IZXNVF.js"></script>
-      <link rel="stylesheet" crossorigin href="/assets/index-BoWP-bil.css">
+      <script type="module" crossorigin src="/assets/index-BboyvjKk.js"></script>
+      <link rel="stylesheet" crossorigin href="/assets/index-eLakgJMX.css">
     </head>
     <body>
         <main class="container">
@@ -82,7 +82,19 @@
             </section>
 
             <section id="workspace-view" aria-label="O teu dia" hidden>
-            <div class="account-bar"><span id="account-label"></span><button type="button" id="sign-out-button">Sair</button></div>
+            <div class="account-bar">
+                <span id="account-label"></span>
+                <div class="account-actions">
+                    <button type="button" id="export-tasks-button" class="icon-button" aria-label="Exportar tarefas (JSON)" title="Exportar tarefas (JSON)">
+                        <svg class="lucide icon-button__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg>
+                    </button>
+                    <button type="button" id="import-tasks-button" class="icon-button" aria-label="Importar tarefas (JSON)" title="Importar tarefas (JSON)">
+                        <svg class="lucide icon-button__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m17 8-5-5-5 5"></path></svg>
+                    </button>
+                    <input type="file" id="import-tasks-file" accept=".json,application/json" hidden>
+                    <button type="button" id="sign-out-button">Sair</button>
+                </div>
+            </div>
             <section class="daily-panel" aria-labelledby="daily-panel-title">
                 <div><span class="eyebrow">HOJE</span><h2 id="daily-panel-title">O teu dia, num olhar</h2></div>
                 <p id="daily-summary" class="daily-summary"></p>
@@ -115,17 +127,6 @@
             <p id="task-status" class="task-status" role="status" aria-live="polite"></p>
 
             <ul id="task-list" aria-label="Tarefas"></ul>
-            <details class="storage-panel">
-                <summary>Recuperação e cópias das tarefas</summary>
-                <p>Recupera a lista antiga ou importa um ficheiro JSON para a tua conta.</p>
-                <div class="storage-actions">
-                    <button type="button" id="recover-tasks-button">Recuperar tarefas antigas</button>
-                    <button type="button" id="export-tasks-button">Exportar cópia</button>
-                    <button type="button" id="import-tasks-button">Importar cópia</button>
-                    <button type="button" id="import-browser-tasks-button" hidden>Importar tarefas guardadas neste navegador</button>
-                </div>
-                <input type="file" id="import-tasks-file" accept=".json,application/json" hidden>
-            </details>
             </section>
         </main>
     </body>
