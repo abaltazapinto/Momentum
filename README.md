@@ -15,18 +15,49 @@ A modern productivity application focused on helping users move forward one task
 
 ## Authentication and recurring tasks
 
-New data is scoped to `users/{uid}/tasks` and requires Firebase Authentication.
-The current browser flow starts anonymously and can link that same Firebase UID to an
-email/password account. This preserves the tasks created before linking and lets the
-same user recover them on another device. No service-account key is stored in the app.
-Deploy `firebase.database.rules.json` in the Firebase Console only after backup and
-validation; this PR does not change production rules or migrate existing `/tasks`.
+An account is required. Before authentication, only the login screen is visible:
+no counters, tasks, task form or recovery controls. Anonymous sessions do not unlock
+the workspace. Signing out clears the rendered tasks and returns to the login screen.
+
+The public Web app config for `compras-e2b70` is committed in `.env` (it is not a
+secret), so local builds and Netlify builds pick it up automatically. To override it
+locally, put values in `.env.local` (see `.env.example`); the config must come from the
+**same Firebase project as the database**. Restart Vite after changing it.
+Do not reuse the API key from `shopping-list-d3a29` with the `compras-e2b70` database.
+The app checks the key's project before enabling sign-in. Without configuration, the
+sign-in controls stay disabled and the workspace stays locked.
+
+Enable Email/Password, Google, Facebook and GitHub as needed in Firebase Authentication,
+configure their OAuth credentials in the console, and authorize the app's actual domain
+(including localhost for development). Never put OAuth secrets or service-account keys
+in Vite variables. See [Firebase password auth](https://firebase.google.com/docs/auth/web/password-auth)
+and [Google sign-in](https://firebase.google.com/docs/auth/web/google-signin).
+
+Email **Entrar** and **Criar conta** are explicit actions; account creation does not depend
+on a `user-not-found` error. Existing anonymous sessions can still be linked. Switching
+from an anonymous session preserves a local copy first; a cancelled social popup does
+not sign the user out. Signed-in tasks are scoped to `users/{uid}/tasks`.
+After login, **Recuperar tarefas antigas** reads `/tasks` through the authenticated SDK
+and copies missing records into the current account. **Importar cópia** accepts a JSON
+backup when the legacy path is no longer readable. Existing account records and the
+original list are never overwritten. Any earlier browser backup can also be imported
+after login; it is not used as an unauthenticated task session.
+
+`firebase.database.rules.json` is deployed to `compras-e2b70`
+(`npx firebase deploy --only database --project compras-e2b70`). Everything is closed by
+default; each user can only read and write `users/{uid}`; the legacy `/tasks` list is
+read-only and only readable by the UID stored in `/legacyOwner` (set by an admin with
+`firebase database:set`, never committed); `endorsements` stays open for an older app
+that shares this database. Run `npm run test:firebase` before changing the rules.
 
 `recurrence.js` contains the pure recurring-task model: one stable task definition,
 dated completion events, idempotent session recording, weekly progress and a
 replanning suggestion. It never creates calendar events.
 
 Run `npm test` for the deterministic LeetCode 3x/week end-to-end fixture.
+For local browser testing, Firebase emulators can be used only in Vite development mode
+with `VITE_FIREBASE_USE_EMULATORS=true` and a `demo-` project. The emulator ports are
+9099 (Auth) and 9000 (Database). This still requires signing in to an emulator account.
 
 ---
 
