@@ -3,6 +3,7 @@ import { socialAuthErrorMessage } from "./auth-state.js"
 import { normalizeTask, parseTaskBackup, preserveBrowserRecovery } from "./task-recovery.js"
 import { firebaseSettingsFromEnv, verifyFirebaseProject } from "./firebase-config.js"
 import { tasksToCsv, tasksToJson, tasksToText } from "./task-export.js"
+import { applyTaskEdit, draftFromTask } from "./task-edit.js"
 
 const el = id => document.getElementById(id)
 const authFormEl = el("auth-form")
@@ -22,7 +23,10 @@ const selectedFrequency = () => frequencyInputs.find(input => input.checked)?.va
 const TARGET_LABELS = { weekly: "Vezes por semana", monthly: "Vezes por mês", yearly: "Vezes por ano" }
 const themeToggleEl = el("theme-toggle")
 const recoveryStorage = { getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value) }
-const state = { user: null, tasks: [], taskStatus: "unavailable", isCreatingTask: false }
+// editing: draft of the task being edited (survives live re-renders of the list).
+const state = { user: null, tasks: [], taskStatus: "unavailable", isCreatingTask: false, editing: null }
+let savingEdit = false
+const EDIT_ERRORS = { "empty-title": "Escreve um nome para a tarefa.", "invalid-target": "Escolhe quantas vezes (1 ou mais)." }
 let auth = null, database = null, authApi = null, databaseApi = null
 let providers = {}, authReady = false, authBusy = false, recoveryBusy = false
 let stopTasksSubscription = null, sessionVersion = 0, pendingProvider = null
@@ -164,6 +168,7 @@ function closeTaskSession() {
     state.isCreatingTask = false
     taskInputEl.value = ""
     authPasswordEl.value = ""
+    state.editing = null
     el("export-menu").hidden = true
     el("export-tasks-button").setAttribute("aria-expanded", "false")
     clearStatus()
@@ -245,7 +250,10 @@ taskListEl.addEventListener("click", async event => {
     const button = event.target.closest("button[data-action]"), user = signedInUser()
     if (!button || !user) return
     const task = state.tasks.find(item => item.id === button.closest("[data-task-id]")?.dataset.taskId)
-    if (!task || sessionInFlight.has(task.id)) return
+    if (!task) return
+    if (button.dataset.action === "edit-task") return startEditing(task)
+    if (button.dataset.action === "cancel-edit") return stopEditing()
+    if (sessionInFlight.has(task.id)) return
     const version = sessionVersion, taskRef = databaseApi.ref(database, `users/${user.uid}/tasks/${task.id}`)
     sessionInFlight.add(task.id)
     button.disabled = true
@@ -261,6 +269,60 @@ taskListEl.addEventListener("click", async event => {
     } catch { if (version === sessionVersion) showError("Não foi possível guardar a alteração. Tenta novamente.") }
     // A request from an older session must not release a lock owned by the current one.
     finally { if (version === sessionVersion) { sessionInFlight.delete(task.id); renderTasks() } }
+})
+function startEditing(task) {
+    state.editing = draftFromTask(task)
+    clearStatus()
+    renderTasks()
+    taskListEl.querySelector('.task-editor [data-field="title"]')?.focus()
+}
+function stopEditing() {
+    const id = state.editing?.id
+    state.editing = null
+    renderTasks()
+    if (id) taskListEl.querySelector(`[data-task-id="${CSS.escape(id)}"] [data-action="edit-task"]`)?.focus()
+}
+function updateDraft(event) {
+    const field = event.target.dataset?.field, form = event.target.closest(".task-editor")
+    if (!field || !form || !state.editing) return
+    if (field === "recurring") {
+        state.editing.recurring = event.target.checked
+        form.querySelector('[data-role="options"]').hidden = !event.target.checked
+    } else if (field === "frequency") {
+        if (!event.target.checked) return
+        state.editing.frequency = event.target.value
+        form.querySelector('[data-role="target-label"]').textContent = TARGET_LABELS[event.target.value]
+    } else state.editing[field] = event.target.value
+}
+taskListEl.addEventListener("input", updateDraft)
+taskListEl.addEventListener("change", updateDraft)
+taskListEl.addEventListener("keydown", event => { if (event.key === "Escape" && state.editing && event.target.closest(".task-editor")) stopEditing() })
+taskListEl.addEventListener("submit", async event => {
+    const form = event.target.closest(".task-editor")
+    if (!form) return
+    event.preventDefault()
+    const user = signedInUser(), draft = state.editing && { ...state.editing }
+    const task = draft && state.tasks.find(item => item.id === draft.id)
+    if (!user || !task || savingEdit) return
+    try { applyTaskEdit(task, draft) }
+    catch (error) { return showError(EDIT_ERRORS[error.code] ?? "Verifica os dados da tarefa.") }
+    const version = sessionVersion
+    savingEdit = true
+    form.querySelector('button[type="submit"]').disabled = true
+    clearStatus()
+    try {
+        // Aborts if the task was deleted meanwhile, so it is never recreated.
+        const result = await databaseApi.runTransaction(databaseApi.ref(database, `users/${user.uid}/tasks/${draft.id}`), current => current ? applyTaskEdit(current, draft) : undefined)
+        if (version !== sessionVersion) return
+        if (!result.committed) showError("Esta tarefa já não existe.")
+        if (state.editing?.id === draft.id) state.editing = null
+        renderTasks()
+    } catch { if (version === sessionVersion) showError("Não foi possível guardar a alteração. Tenta novamente.") }
+    finally {
+        savingEdit = false
+        const submit = taskListEl.querySelector('.task-editor button[type="submit"]')
+        if (submit) submit.disabled = false
+    }
 })
 // Copies only tasks the account does not have yet; existing tasks are never overwritten.
 async function importTasks(loadTasks) {
@@ -336,6 +398,9 @@ function renderTaskControls() {
     for (const id of ["import-tasks-button", "export-tasks-button"]) el(id).disabled = !ready || recoveryBusy
 }
 function renderTasks() {
+    // Live updates rebuild the list; keep the cursor in the editor if it was there.
+    const focusedField = document.activeElement?.closest?.(".task-editor") ? document.activeElement.dataset.field : null
+    if (state.editing && !state.tasks.some(task => task.id === state.editing.id)) state.editing = null
     taskListEl.textContent = ""
     renderTaskControls()
     if (!signedInUser()) { el("daily-summary").textContent = ""; return }
@@ -349,6 +414,7 @@ function renderTasks() {
     el("daily-summary").textContent = `${state.tasks.length - completed} por fazer · ${completed} concluídas`
     if (!state.tasks.length) { taskListEl.append(createListMessage("Vamos organizar o teu dia", "Adiciona a primeira tarefa para começar.")); return }
     taskListEl.append(...state.tasks.map(createTaskElement))
+    if (focusedField === "title" || focusedField === "target") taskListEl.querySelector(`.task-editor [data-field="${focusedField}"]`)?.focus()
 }
 function createListMessage(title, message) {
     const item = document.createElement("li"), heading = document.createElement("h2"), description = document.createElement("p")
@@ -360,7 +426,44 @@ function createListMessage(title, message) {
     item.append(heading, description)
     return item
 }
+function createTaskEditor(task) {
+    const draft = state.editing
+    const item = document.createElement("li"), form = document.createElement("form")
+    item.className = "task task--editing"
+    item.dataset.taskId = task.id
+    form.className = "task-editor"
+    form.noValidate = true
+    form.setAttribute("aria-label", "Editar tarefa")
+    // Static markup only; user text is set through .value below.
+    form.innerHTML = `
+        <label class="task-editor__label" for="edit-title">Tarefa</label>
+        <input type="text" id="edit-title" data-field="title" autocomplete="off">
+        <label class="task-editor__check"><input type="checkbox" data-field="recurring"> Recorrente</label>
+        <div class="task-editor__options" data-role="options">
+            <div class="frequency-choice">
+                <label><input type="radio" name="edit-frequency" value="weekly" data-field="frequency"><span>Semanal</span></label>
+                <label><input type="radio" name="edit-frequency" value="monthly" data-field="frequency"><span>Mensal</span></label>
+                <label><input type="radio" name="edit-frequency" value="yearly" data-field="frequency"><span>Anual</span></label>
+            </div>
+            <label class="task-editor__label" for="edit-target" data-role="target-label"></label>
+            <input type="number" id="edit-target" min="1" step="1" data-field="target">
+        </div>
+        <div class="task-editor__actions">
+            <button type="button" class="task-editor__cancel" data-action="cancel-edit">Cancelar</button>
+            <button type="submit">Guardar</button>
+        </div>`
+    form.querySelector('[data-field="title"]').value = draft.title
+    form.querySelector('[data-field="recurring"]').checked = draft.recurring
+    form.querySelector(`[data-field="frequency"][value="${draft.frequency}"]`).checked = true
+    form.querySelector('[data-field="target"]').value = draft.target
+    form.querySelector('[data-role="options"]').hidden = !draft.recurring
+    form.querySelector('[data-role="target-label"]').textContent = TARGET_LABELS[draft.frequency]
+    form.querySelector('button[type="submit"]').disabled = savingEdit
+    item.append(form)
+    return item
+}
 function createTaskElement(task) {
+    if (state.editing?.id === task.id) return createTaskEditor(task)
     const item = document.createElement("li")
     item.className = `task${task.completed ? " task--completed" : ""}`
     item.dataset.taskId = task.id
@@ -395,7 +498,15 @@ function createTaskElement(task) {
     deleteButton.dataset.action = "delete-task"
     deleteButton.setAttribute("aria-label", `Eliminar ${task.title}`)
     deleteButton.append(icon("trash", "task__delete-icon"))
-    item.append(control, content, deleteButton)
+    const editButton = document.createElement("button"), actions = document.createElement("div")
+    editButton.type = "button"
+    editButton.className = "task__delete-button"
+    editButton.dataset.action = "edit-task"
+    editButton.setAttribute("aria-label", `Editar ${task.title}`)
+    editButton.append(icon("pencil", "task__delete-icon"))
+    actions.className = "task__actions"
+    actions.append(editButton, deleteButton)
+    item.append(control, content, actions)
     return item
 }
 function icon(name, className) {
@@ -403,7 +514,7 @@ function icon(name, className) {
     svg.setAttribute("class", `lucide ${className}`)
     svg.setAttribute("viewBox", "0 0 24 24")
     svg.setAttribute("aria-hidden", "true")
-    const paths = { square: ["M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"], check: ["M20 6 9 17l-5-5"], trash: ["M3 6h18", "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6", "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2", "M10 11v6m4-6v6"] }
+    const paths = { square: ["M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"], check: ["M20 6 9 17l-5-5"], pencil: ["M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z", "m15 5 4 4"], trash: ["M3 6h18", "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6", "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2", "M10 11v6m4-6v6"] }
     for (const d of paths[name]) { const path = document.createElementNS("http://www.w3.org/2000/svg", "path"); path.setAttribute("d", d); svg.append(path) }
     return svg
 }
