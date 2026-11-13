@@ -39,6 +39,28 @@ test("Realtime Database isolates UIDs and permits the owner", async () => {
     assert.notEqual(ownerUid, otherUid)
 })
 
+// Admin-only seed through the emulator REST API (clients cannot write these paths).
+const adminPut = (path, value) => fetch(`http://127.0.0.1:9000/${path}.json?ns=demo-momentum-default-rtdb`, { method: "PUT", headers: { Authorization: "Bearer owner" }, body: JSON.stringify(value) })
+
+test("legacy /tasks list is read-only and private to the original owner", async () => {
+    await adminPut("legacyOwner", ownerUid)
+    await adminPut("tasks", { legacy1: { title: "Tarefa antiga", completed: false } })
+    assert.equal((await get(ref(owner.database, "tasks"))).val().legacy1.title, "Tarefa antiga")
+    await assert.rejects(() => get(ref(owner.database, "legacyOwner")), /Permission denied/i)
+    await assert.rejects(() => set(ref(owner.database, "legacyOwner"), otherUid), /Permission denied/i)
+    await assert.rejects(() => get(ref(anonymous.database, "tasks")), /Permission denied/i)
+    await assert.rejects(() => get(ref(other.database, "tasks")), /Permission denied/i)
+    await assert.rejects(() => set(ref(owner.database, "tasks/new"), { title: "x" }), /Permission denied/i)
+    await assert.rejects(() => set(ref(anonymous.database, "tasks/new"), { title: "x" }), /Permission denied/i)
+})
+
+test("unknown top-level paths are closed; endorsements stays open for the other app", async () => {
+    await assert.rejects(() => get(ref(anonymous.database, "/")), /Permission denied/i)
+    await assert.rejects(() => set(ref(owner.database, "anything"), "x"), /Permission denied/i)
+    await set(ref(anonymous.database, "endorsements/check"), "ok")
+    assert.equal((await get(ref(anonymous.database, "endorsements/check"))).val(), "ok")
+})
+
 test("real SDK transaction persists one recurring session after reload", async () => {
     const taskRef = ref(owner.database, taskPath)
     await runTransaction(taskRef, (current) => {

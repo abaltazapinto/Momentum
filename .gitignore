@@ -1,2 +1,5 @@
 node_modules/
 database-debug.log
+recovery/
+.env.local
+.env.*.local

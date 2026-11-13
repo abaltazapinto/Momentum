@@ -1,6 +1,26 @@
 # Legacy task recovery plan
 
-This plan is prepare-only. It does not read from or write to the production Firebase project.
+## Recovery available in the app
+
+On 2026-11-13 a read-only check found 7 records still present under `/tasks`.
+The configured authentication API key resolved to `shopping-list-d3a29`, while the
+database was `compras-e2b70`. That mixed configuration has been removed. The correct
+Web app config is required for sign-in. The app requires a non-anonymous account.
+
+`node scripts/backup-legacy-tasks.mjs` reads only that original `/tasks` endpoint and
+writes a private, timestamped JSON backup under ignored `recovery/`. It refuses to
+overwrite a file and never writes to Firebase. Do not put backups in `public/` or commit them.
+
+After signing in, use **Recuperar tarefas antigas** to read `/tasks` through the
+authenticated SDK, or **Importar cópia** with the JSON backup if the legacy endpoint is
+no longer readable. Recovery preserves IDs and metadata and uses per-task transactions
+to copy only missing records into the current user's namespace. Re-running skips existing
+records. No recovery runs before login, no rules are relaxed, and the original list is
+retained. A denied read must never be treated as an empty source.
+
+## Manual account migration
+
+The following script is prepare-only. It does not read from or write to production.
 
 ## Source and destination
 

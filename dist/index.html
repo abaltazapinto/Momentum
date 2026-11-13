@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-PT">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta
             name="description"
-            content="Momentum is a simple personal task manager."
+            content="Momentum — organiza o próximo passo."
         >
         <script>
             try {
@@ -28,14 +28,15 @@
         <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16-RKmhXvh6.png">
         <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon-CS7a2kyM.png">
         <link rel="manifest" href="/assets/site-BNHCqK-M.webmanifest">
-      <script type="module" crossorigin src="/assets/index-cCe6ja6_.js"></script>
-      <link rel="stylesheet" crossorigin href="/assets/index-Lz-iOzT4.css">
+      <script type="module" crossorigin src="/assets/index-DphlA5Ey.js"></script>
+      <link rel="stylesheet" crossorigin href="/assets/index-XssokHrR.css">
     </head>
     <body>
         <main class="container">
             <header class="app-header">
-                <h1>Momentum</h1>
-                <p>Keep moving forward, one task at a time.</p>
+                <div class="eyebrow">DAILY OS</div>
+                <h1>Organize my day</h1>
+                <p id="app-tagline">Entra na tua conta para organizar o teu dia.</p>
                 <button
                     type="button"
                     id="theme-toggle"
@@ -59,34 +60,65 @@
                 </button>
             </header>
 
+            <section id="entry-view" aria-label="Iniciar sessão">
             <form id="auth-form" class="task-form">
-                <label for="auth-email">Conta para usar noutro dispositivo</label>
+                <h2 class="auth-title">Entra no Momentum</h2>
+                <p id="auth-status" class="auth-status" role="status">A preparar a entrada…</p>
+                <label for="auth-email">Email</label>
                 <input type="email" id="auth-email" placeholder="Email" autocomplete="email" required>
+                <label for="auth-password">Palavra-passe</label>
                 <input type="password" id="auth-password" placeholder="Palavra-passe (mín. 6 caracteres)" autocomplete="current-password" minlength="6" required>
-                <button type="submit" id="auth-submit-button">Ligar conta</button>
-                <button type="button" id="google-sign-in-button" disabled>Continuar com Google</button>
-                <button type="button" id="google-existing-sign-in-button" hidden>Entrar na conta Google existente</button>
+                <div class="email-login-actions">
+                    <button type="submit" id="auth-submit-button" disabled>Entrar</button>
+                    <button type="submit" id="auth-create-button" disabled>Criar conta</button>
+                </div>
+                <div class="social-login-grid">
+                    <button type="button" id="google-sign-in-button" disabled><span class="social-mark">G</span> Google</button>
+                    <button type="button" id="facebook-sign-in-button" disabled><span class="social-mark">f</span> Facebook</button>
+                    <button type="button" id="github-sign-in-button" disabled><span class="social-mark">⌘</span> GitHub</button>
+                </div>
+                <button type="button" id="existing-sign-in-button" hidden>Entrar na conta existente</button>
             </form>
+            </section>
+
+            <section id="workspace-view" aria-label="O teu dia" hidden>
+            <div class="account-bar"><span id="account-label"></span><button type="button" id="sign-out-button">Sair</button></div>
+            <section class="daily-panel" aria-labelledby="daily-panel-title">
+                <div><span class="eyebrow">HOJE</span><h2 id="daily-panel-title">O teu dia, num olhar</h2></div>
+                <p id="daily-summary" class="daily-summary"></p>
+            </section>
 
             <form id="task-form" class="task-form">
-                <label for="task-input">Task</label>
+                <label for="task-input">Próximo passo</label>
                 <input
                     type="text"
                     id="task-input"
                     name="task"
-                    placeholder="What needs to be done?"
+                    placeholder="O que precisa de ser feito?"
                     autocomplete="off"
                     required
                 >
                 <label><input type="checkbox" id="recurring-toggle"> Recorrente semanal</label>
                 <input type="number" id="recurring-target" min="1" step="1" value="3" hidden aria-label="Sessões por semana">
                 <input type="number" id="recurring-duration" min="1" step="1" value="30" hidden aria-label="Minutos por sessão">
-                <button type="submit" id="add-task-button">Add task</button>
+                <button type="submit" id="add-task-button">Adicionar tarefa</button>
             </form>
 
             <p id="task-status" class="task-status" role="status" aria-live="polite"></p>
 
-            <ul id="task-list" aria-label="Tasks"></ul>
+            <ul id="task-list" aria-label="Tarefas"></ul>
+            <details class="storage-panel">
+                <summary>Recuperação e cópias das tarefas</summary>
+                <p>Recupera a lista antiga ou importa um ficheiro JSON para a tua conta.</p>
+                <div class="storage-actions">
+                    <button type="button" id="recover-tasks-button">Recuperar tarefas antigas</button>
+                    <button type="button" id="export-tasks-button">Exportar cópia</button>
+                    <button type="button" id="import-tasks-button">Importar cópia</button>
+                    <button type="button" id="import-browser-tasks-button" hidden>Importar tarefas guardadas neste navegador</button>
+                </div>
+                <input type="file" id="import-tasks-file" accept=".json,application/json" hidden>
+            </details>
+            </section>
         </main>
     </body>
 </html>

@@ -2,6 +2,14 @@
   "rules": {
     ".read": false,
     ".write": false,
+    "endorsements": {
+      ".read": true,
+      ".write": true
+    },
+    "tasks": {
+      ".read": "auth != null && auth.uid === root.child('legacyOwner').val()",
+      ".write": false
+    },
     "users": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",

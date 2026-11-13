@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { authStatusForAnonymousFailure, googleAuthAction, googleAuthErrorMessage, taskListState, taskSubmissionMessage } from "../auth-state.js"
+import { authStatusForAnonymousFailure, googleAuthAction, googleAuthErrorMessage, socialAuthErrorMessage, taskListState, taskSubmissionMessage } from "../auth-state.js"
 
 test("anonymous auth failure is terminal but recoverable through email sign-in", () => {
     assert.equal(authStatusForAnonymousFailure(), "error")
@@ -38,4 +38,11 @@ test("Google Sign-In waits for Auth initialization and supports explicit existin
     assert.equal(googleAuthAction({ authReady: true, isAnonymous: true }), "link")
     assert.equal(googleAuthAction({ authReady: true, isAnonymous: false }), "sign-in")
     assert.equal(googleAuthAction({ authReady: true, isAnonymous: true, existingAccountConflict: true }), "sign-in-existing")
+})
+
+test("missing configuration and masked email errors have an actionable message", () => {
+    assert.match(socialAuthErrorMessage("auth/project-mismatch"), /não corresponde/)
+    assert.match(socialAuthErrorMessage("auth/configuration-not-found"), /não está configurada/)
+    assert.match(socialAuthErrorMessage("auth/invalid-credential", "email"), /Criar conta/)
+    assert.match(socialAuthErrorMessage("auth/credential-already-in-use", "GitHub"), /GitHub/)
 })
