@@ -13,9 +13,9 @@ deny unauthenticated reads, so it reads through the Firebase CLI with the projec
 owner's login (`npx firebase login` first). It refuses to
 overwrite a file and never writes to Firebase. Do not put backups in `public/` or commit them.
 
-After signing in, use **Recuperar tarefas antigas** to read `/tasks` through the
-authenticated SDK, or **Importar cópia** with the JSON backup if the legacy endpoint is
-no longer readable. Recovery preserves IDs and metadata and uses per-task transactions
+The legacy list was recovered into the owner's account on 2026-11-13, so the in-app
+**Recuperar tarefas antigas** button was removed. To restore again, create a backup with
+the script above and use the import icon (⬆) after signing in. Import preserves IDs and metadata and uses per-task transactions
 to copy only missing records into the current user's namespace. Re-running skips existing
 records. No recovery runs before login, no rules are relaxed, and the original list is
 retained. A denied read must never be treated as an empty source.

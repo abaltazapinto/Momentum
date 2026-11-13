@@ -1,6 +1,6 @@
 import { createRecurringTask, recordCompletion, currentProgress, PERIOD_LABELS } from "./recurrence.js"
 import { socialAuthErrorMessage } from "./auth-state.js"
-import { normalizeTask, parseTaskBackup, readBrowserRecovery, preserveBrowserRecovery } from "./task-recovery.js"
+import { normalizeTask, parseTaskBackup, preserveBrowserRecovery } from "./task-recovery.js"
 import { firebaseSettingsFromEnv, verifyFirebaseProject } from "./firebase-config.js"
 
 const el = id => document.getElementById(id)
@@ -196,10 +196,6 @@ function renderSession() {
     el("workspace-view").hidden = !entered
     el("app-tagline").textContent = entered ? "Um passo de cada vez. O teu dia começa aqui." : "Entra na tua conta para organizar o teu dia."
     el("account-label").textContent = entered ? state.user.displayName || state.user.email || "A tua conta" : ""
-    if (entered) {
-        try { el("import-browser-tasks-button").hidden = readBrowserRecovery(recoveryStorage).length === 0 }
-        catch { el("import-browser-tasks-button").hidden = true }
-    }
     renderTasks()
 }
 taskInputEl.addEventListener("invalid", event => { event.preventDefault(); showError("Escreve uma tarefa para continuar."); taskInputEl.focus() })
@@ -262,13 +258,14 @@ taskListEl.addEventListener("click", async event => {
     // A request from an older session must not release a lock owned by the current one.
     finally { if (version === sessionVersion) { sessionInFlight.delete(task.id); renderTasks() } }
 })
-async function recoverTasks(loadTasks) {
+// Copies only tasks the account does not have yet; existing tasks are never overwritten.
+async function importTasks(loadTasks) {
     const user = signedInUser()
     if (!user || recoveryBusy || state.taskStatus !== "ready") return
     const version = sessionVersion
     recoveryBusy = true
     renderTaskControls()
-    showInfo("A recuperar tarefas…")
+    showInfo("A importar tarefas…")
     try {
         const tasks = await loadTasks()
         let count = 0
@@ -277,19 +274,14 @@ async function recoverTasks(loadTasks) {
             const result = await databaseApi.runTransaction(databaseApi.ref(database, `users/${user.uid}/tasks/${task.id}`), current => current === null ? task : undefined)
             if (result.committed) count++
         }
-        if (version === sessionVersion) showInfo(count ? `${count} tarefas recuperadas para a tua conta. A lista original foi preservada.` : "Não há tarefas novas para importar. As tarefas existentes foram preservadas.")
-    } catch { if (version === sessionVersion) showError("A recuperação não terminou. Podes tentar novamente ou importar a cópia JSON; as tarefas originais foram preservadas.") }
+        if (version === sessionVersion) showInfo(count ? `${count} tarefas importadas para a tua conta.` : "Não há tarefas novas para importar. As tarefas existentes foram preservadas.")
+    } catch { if (version === sessionVersion) showError("A importação não terminou. Verifica o ficheiro e tenta novamente; as tarefas existentes foram preservadas.") }
     finally { recoveryBusy = false; renderTaskControls() }
 }
-el("recover-tasks-button").addEventListener("click", () => recoverTasks(async () => {
-    const snapshot = await databaseApi.get(databaseApi.ref(database, "tasks"))
-    return parseTaskBackup({ tasks: snapshot.val() ?? {} })
-}))
-el("import-browser-tasks-button").addEventListener("click", () => recoverTasks(() => readBrowserRecovery(recoveryStorage)))
 el("import-tasks-button").addEventListener("click", () => { if (signedInUser()) el("import-tasks-file").click() })
 el("import-tasks-file").addEventListener("change", async () => {
     const file = el("import-tasks-file").files[0]
-    if (file) await recoverTasks(async () => parseTaskBackup(JSON.parse(await file.text())))
+    if (file) await importTasks(async () => parseTaskBackup(JSON.parse(await file.text())))
     el("import-tasks-file").value = ""
 })
 el("export-tasks-button").addEventListener("click", () => {
@@ -306,7 +298,7 @@ function renderTaskControls() {
     const ready = Boolean(signedInUser()) && state.taskStatus === "ready"
     el("add-task-button").disabled = !ready || state.isCreatingTask
     el("add-task-button").textContent = state.isCreatingTask ? "A guardar…" : "Adicionar tarefa"
-    for (const id of ["recover-tasks-button", "import-tasks-button", "import-browser-tasks-button", "export-tasks-button"]) el(id).disabled = !ready || recoveryBusy
+    for (const id of ["import-tasks-button", "export-tasks-button"]) el(id).disabled = !ready || recoveryBusy
 }
 function renderTasks() {
     taskListEl.textContent = ""
@@ -320,7 +312,7 @@ function renderTasks() {
     }
     const completed = state.tasks.filter(task => task.completed).length
     el("daily-summary").textContent = `${state.tasks.length - completed} por fazer · ${completed} concluídas`
-    if (!state.tasks.length) { taskListEl.append(createListMessage("Vamos organizar o teu dia", "Adiciona a primeira tarefa ou recupera a tua lista anterior nas opções abaixo.")); return }
+    if (!state.tasks.length) { taskListEl.append(createListMessage("Vamos organizar o teu dia", "Adiciona a primeira tarefa para começar.")); return }
     taskListEl.append(...state.tasks.map(createTaskElement))
 }
 function createListMessage(title, message) {
