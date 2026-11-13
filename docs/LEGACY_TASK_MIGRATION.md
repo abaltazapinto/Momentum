@@ -7,8 +7,10 @@ The configured authentication API key resolved to `shopping-list-d3a29`, while t
 database was `compras-e2b70`. That mixed configuration has been removed. The correct
 Web app config is required for sign-in. The app requires a non-anonymous account.
 
-`node scripts/backup-legacy-tasks.mjs` reads only that original `/tasks` endpoint and
-writes a private, timestamped JSON backup under ignored `recovery/`. It refuses to
+`node scripts/backup-legacy-tasks.mjs` reads only that original `/tasks` path and
+writes a private, timestamped JSON backup under ignored `recovery/`. The database rules
+deny unauthenticated reads, so it reads through the Firebase CLI with the project
+owner's login (`npx firebase login` first). It refuses to
 overwrite a file and never writes to Firebase. Do not put backups in `public/` or commit them.
 
 After signing in, use **Recuperar tarefas antigas** to read `/tasks` through the

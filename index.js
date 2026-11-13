@@ -138,7 +138,8 @@ async function preserveAnonymousTasks() {
     } catch { throw Object.assign(new Error("Guest backup failed"), { code: "auth/guest-backup-failed" }) }
 }
 el("sign-out-button").addEventListener("click", async () => {
-    if (!signedInUser() || recoveryBusy) return
+    // Never blocked by a pending recovery: changing session makes that recovery stop.
+    if (!signedInUser()) return
     el("sign-out-button").disabled = true
     try { await authApi.signOut(auth); closeTaskSession() }
     catch { showError("Não foi possível terminar a sessão. Tenta novamente.") }
@@ -225,10 +226,14 @@ taskListEl.addEventListener("change", async event => {
     if (!checkbox || !user) return
     const task = state.tasks.find(item => item.id === checkbox.closest("[data-task-id]")?.dataset.taskId)
     if (!task) return
-    const version = sessionVersion
+    const version = sessionVersion, completed = checkbox.checked
     checkbox.disabled = true
     clearStatus()
-    try { await databaseApi.update(databaseApi.ref(database, `users/${user.uid}/tasks/${task.id}`), { title: task.title, completed: checkbox.checked, updatedAt: databaseApi.serverTimestamp() }) }
+    try {
+        // A transaction aborts if the task was deleted meanwhile, so it is never recreated half-empty.
+        const result = await databaseApi.runTransaction(databaseApi.ref(database, `users/${user.uid}/tasks/${task.id}`), current => current ? { ...current, completed, updatedAt: Date.now() } : undefined)
+        if (!result.committed && version === sessionVersion) renderTasks()
+    }
     catch { if (version === sessionVersion) { checkbox.checked = task.completed; checkbox.disabled = false; showError("Não foi possível guardar a alteração. Tenta novamente.") } }
 })
 taskListEl.addEventListener("click", async event => {
@@ -249,7 +254,8 @@ taskListEl.addEventListener("click", async event => {
             })
         } else if (button.dataset.action === "delete-task") await databaseApi.remove(taskRef)
     } catch { if (version === sessionVersion) showError("Não foi possível guardar a alteração. Tenta novamente.") }
-    finally { sessionInFlight.delete(task.id); if (version === sessionVersion) renderTasks() }
+    // A request from an older session must not release a lock owned by the current one.
+    finally { if (version === sessionVersion) { sessionInFlight.delete(task.id); renderTasks() } }
 })
 async function recoverTasks(loadTasks) {
     const user = signedInUser()
@@ -296,7 +302,6 @@ function renderTaskControls() {
     el("add-task-button").disabled = !ready || state.isCreatingTask
     el("add-task-button").textContent = state.isCreatingTask ? "A guardar…" : "Adicionar tarefa"
     for (const id of ["recover-tasks-button", "import-tasks-button", "import-browser-tasks-button", "export-tasks-button"]) el(id).disabled = !ready || recoveryBusy
-    el("sign-out-button").disabled = recoveryBusy
 }
 function renderTasks() {
     taskListEl.textContent = ""

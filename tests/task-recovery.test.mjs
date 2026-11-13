@@ -22,6 +22,18 @@ test("malformed backups fail before any import, including unsafe IDs and invalid
     assert.equal(normalizeTask("r", { title: "Bad event", completionEvents: [null] }), null)
 })
 
+test("nested keys Firebase would reject make the whole backup fail before any import", () => {
+    assert.throws(() => parseTaskBackup({ tasks: { good: "Valid", bad: { title: "Nested", notes: { "bad/key": 1 } } } }))
+    assert.throws(() => parseTaskBackup({ tasks: { bad: { title: "In array", tags: [{ "a.b": 1 }] } } }))
+})
+
+test("unsupported recurrence is rejected instead of silently dropped", () => {
+    assert.equal(normalizeTask("r", { title: "Daily", recurrence: { frequency: "daily" } }), null)
+    assert.equal(normalizeTask("r", { title: "Weird", recurrence: "weekly" }), null)
+    assert.throws(() => parseTaskBackup({ tasks: { good: "Valid", daily: { title: "Daily", recurrence: { frequency: "daily" } } } }))
+    assert.equal(normalizeTask("r", { title: "One-off", recurrence: null }).recurrence, null)
+})
+
 test("preserving an old guest session never overwrites a browser backup", () => {
     let raw = null
     const storage = { getItem: () => raw, setItem: (_, value) => { raw = value } }
