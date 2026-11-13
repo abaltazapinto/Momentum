@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node recurrence.test.js && node e2e.test.js && node --test tests/auth-state.test.mjs tests/migrate-legacy-tasks.test.mjs tests/recurrence-dst.test.mjs tests/task-recovery.test.mjs tests/firebase-config.test.mjs tests/recurrence-periods.test.mjs",
+    "test": "node recurrence.test.js && node e2e.test.js && node --test tests/auth-state.test.mjs tests/migrate-legacy-tasks.test.mjs tests/recurrence-dst.test.mjs tests/task-recovery.test.mjs tests/firebase-config.test.mjs tests/recurrence-periods.test.mjs tests/task-export.test.mjs",
     "test:firebase": "firebase emulators:exec --only auth,database --project demo-momentum \"node --test tests/firebase-emulator.test.mjs\"",
     "prepare:migration": "node scripts/migrate-legacy-tasks.mjs"
   },

@@ -2,6 +2,7 @@ import { createRecurringTask, recordCompletion, currentProgress, PERIOD_LABELS }
 import { socialAuthErrorMessage } from "./auth-state.js"
 import { normalizeTask, parseTaskBackup, preserveBrowserRecovery } from "./task-recovery.js"
 import { firebaseSettingsFromEnv, verifyFirebaseProject } from "./firebase-config.js"
+import { tasksToCsv, tasksToJson, tasksToText } from "./task-export.js"
 
 const el = id => document.getElementById(id)
 const authFormEl = el("auth-form")
@@ -163,6 +164,8 @@ function closeTaskSession() {
     state.isCreatingTask = false
     taskInputEl.value = ""
     authPasswordEl.value = ""
+    el("export-menu").hidden = true
+    el("export-tasks-button").setAttribute("aria-expanded", "false")
     clearStatus()
     renderSession()
 }
@@ -216,7 +219,8 @@ taskFormEl.addEventListener("submit", async event => {
             task.completionEvents = []
         }
         await databaseApi.push(databaseApi.ref(database, `users/${user.uid}/tasks`), task)
-        if (version === sessionVersion) { taskInputEl.value = ""; taskInputEl.focus() }
+        // Only clear what was saved: the next task may already be typed while the server confirms.
+        if (version === sessionVersion && taskInputEl.value.trim() === title) { taskInputEl.value = ""; taskInputEl.focus() }
     } catch { if (version === sessionVersion) showError("Não foi possível guardar a tarefa. O texto foi mantido para tentares novamente.") }
     finally { if (version === sessionVersion) { state.isCreatingTask = false; renderTaskControls() } }
 })
@@ -284,16 +288,47 @@ el("import-tasks-file").addEventListener("change", async () => {
     if (file) await importTasks(async () => parseTaskBackup(JSON.parse(await file.text())))
     el("import-tasks-file").value = ""
 })
+const exportMenuEl = el("export-menu")
+function setExportMenu(open) {
+    exportMenuEl.hidden = !open
+    el("export-tasks-button").setAttribute("aria-expanded", String(open))
+    if (open) exportMenuEl.querySelector("button").focus()
+}
 el("export-tasks-button").addEventListener("click", () => {
     if (!signedInUser() || state.taskStatus !== "ready") return
-    const backup = { version: 1, exportedAt: new Date().toISOString(), tasks: Object.fromEntries(state.tasks.map(task => [task.id, task])) }
-    const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }))
+    setExportMenu(exportMenuEl.hidden)
+})
+document.addEventListener("click", event => { if (!exportMenuEl.hidden && !event.target.closest(".export-wrapper")) setExportMenu(false) })
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && !exportMenuEl.hidden) { setExportMenu(false); el("export-tasks-button").focus() }
+})
+exportMenuEl.addEventListener("click", async event => {
+    const item = event.target.closest("button[data-format]")
+    if (!item || !signedInUser() || state.taskStatus !== "ready") return
+    setExportMenu(false)
+    const day = new Date().toISOString().slice(0, 10)
+    if (item.dataset.format === "json") download(`momentum-tasks-${day}.json`, tasksToJson(state.tasks), "application/json")
+    else if (item.dataset.format === "csv") download(`momentum-tasks-${day}.csv`, tasksToCsv(state.tasks), "text/csv;charset=utf-8")
+    else await shareTaskList(tasksToText(state.tasks))
+})
+// Phones open the share sheet (WhatsApp, Messages…); elsewhere the list is copied to paste.
+async function shareTaskList(text) {
+    clearStatus()
+    if (navigator.share) {
+        try { await navigator.share({ title: "As minhas tarefas", text }); return }
+        catch (error) { if (error.name === "AbortError") return }
+    }
+    try { await navigator.clipboard.writeText(text); showInfo("Lista copiada. Cola no WhatsApp ou noutra app.") }
+    catch { showError("Não foi possível copiar a lista. Experimenta exportar em CSV.") }
+}
+function download(filename, content, type) {
+    const url = URL.createObjectURL(new Blob([content], { type }))
     const link = document.createElement("a")
     link.href = url
-    link.download = `momentum-tasks-${new Date().toISOString().slice(0, 10)}.json`
+    link.download = filename
     link.click()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
-})
+}
 function renderTaskControls() {
     const ready = Boolean(signedInUser()) && state.taskStatus === "ready"
     el("add-task-button").disabled = !ready || state.isCreatingTask

@@ -84,9 +84,16 @@
             <div class="account-bar">
                 <span id="account-label"></span>
                 <div class="account-actions">
-                    <button type="button" id="export-tasks-button" class="icon-button" aria-label="Exportar tarefas (JSON)" title="Exportar tarefas (JSON)">
-                        <svg class="lucide icon-button__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg>
-                    </button>
+                    <div class="export-wrapper">
+                        <button type="button" id="export-tasks-button" class="icon-button" aria-label="Exportar ou partilhar tarefas" title="Exportar ou partilhar tarefas" aria-haspopup="menu" aria-expanded="false" aria-controls="export-menu">
+                            <svg class="lucide icon-button__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg>
+                        </button>
+                        <div id="export-menu" class="export-menu" role="menu" hidden>
+                            <button type="button" role="menuitem" data-format="text"><strong>Partilhar lista</strong><span>WhatsApp, mensagens…</span></button>
+                            <button type="button" role="menuitem" data-format="csv"><strong>CSV</strong><span>Excel, Google Sheets, gráficos</span></button>
+                            <button type="button" role="menuitem" data-format="json"><strong>JSON</strong><span>Cópia de segurança (dá para importar)</span></button>
+                        </div>
+                    </div>
                     <button type="button" id="import-tasks-button" class="icon-button" aria-label="Importar tarefas (JSON)" title="Importar tarefas (JSON)">
                         <svg class="lucide icon-button__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m17 8-5-5-5 5"></path></svg>
                     </button>
