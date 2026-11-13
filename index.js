@@ -14,7 +14,8 @@ const taskListEl = el("task-list")
 const taskStatusEl = el("task-status")
 const recurringToggleEl = el("recurring-toggle")
 const recurringTargetEl = el("recurring-target")
-const recurringDurationEl = el("recurring-duration")
+// The recurrence model still stores a session length; it is no longer asked for or shown.
+const DEFAULT_SESSION_MINUTES = 30
 const themeToggleEl = el("theme-toggle")
 const recoveryStorage = { getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value) }
 const state = { user: null, tasks: [], taskStatus: "unavailable", isCreatingTask: false }
@@ -212,7 +213,7 @@ taskFormEl.addEventListener("submit", async event => {
     try {
         const task = { title, completed: false, createdAt: databaseApi.serverTimestamp(), updatedAt: databaseApi.serverTimestamp() }
         if (recurringToggleEl.checked) {
-            task.recurrence = createRecurringTask({ id: "pending", title, durationMinutes: Number(recurringDurationEl.value), targetCount: Number(recurringTargetEl.value), timezone: "Atlantic/Madeira" }).recurrence
+            task.recurrence = createRecurringTask({ id: "pending", title, durationMinutes: DEFAULT_SESSION_MINUTES, targetCount: Number(recurringTargetEl.value), timezone: "Atlantic/Madeira" }).recurrence
             task.completionEvents = []
         }
         await databaseApi.push(databaseApi.ref(database, `users/${user.uid}/tasks`), task)
@@ -220,7 +221,7 @@ taskFormEl.addEventListener("submit", async event => {
     } catch { if (version === sessionVersion) showError("Não foi possível guardar a tarefa. O texto foi mantido para tentares novamente.") }
     finally { if (version === sessionVersion) { state.isCreatingTask = false; renderTaskControls() } }
 })
-recurringToggleEl.addEventListener("change", () => { recurringTargetEl.hidden = !recurringToggleEl.checked; recurringDurationEl.hidden = !recurringToggleEl.checked })
+recurringToggleEl.addEventListener("change", () => { recurringTargetEl.hidden = !recurringToggleEl.checked; el("recurring-target-label").hidden = !recurringToggleEl.checked })
 taskListEl.addEventListener("change", async event => {
     const checkbox = event.target.closest('[data-action="toggle-task"]'), user = signedInUser()
     if (!checkbox || !user) return
@@ -349,7 +350,7 @@ function createTaskElement(task) {
         const progress = weeklyProgress(task, getWeekStartForInstant(new Date().toISOString(), task.recurrence.timezone))
         const progressEl = document.createElement("p"), sessionButton = document.createElement("button")
         progressEl.className = "recurring-progress"
-        progressEl.textContent = `${progress.doneCount}/${progress.targetCount} esta semana · ${task.recurrence.durationMinutes} min`
+        progressEl.textContent = `${progress.doneCount}/${progress.targetCount} esta semana`
         sessionButton.type = "button"
         sessionButton.className = "task__session-button"
         sessionButton.dataset.action = "record-session"

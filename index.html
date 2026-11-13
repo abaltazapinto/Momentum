@@ -98,8 +98,8 @@
                     required
                 >
                 <label><input type="checkbox" id="recurring-toggle"> Recorrente semanal</label>
-                <input type="number" id="recurring-target" min="1" step="1" value="3" hidden aria-label="Sessões por semana">
-                <input type="number" id="recurring-duration" min="1" step="1" value="30" hidden aria-label="Minutos por sessão">
+                <label for="recurring-target" id="recurring-target-label" hidden>Vezes por semana</label>
+                <input type="number" id="recurring-target" min="1" step="1" value="3" hidden>
                 <button type="submit" id="add-task-button">Adicionar tarefa</button>
             </form>
 
