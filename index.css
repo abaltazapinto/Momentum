@@ -172,6 +172,14 @@ html, body {
 .daily-summary strong { color: var(--color-button-text); font-size: 1.2rem; }
 .daily-summary span { margin: 0 5px; opacity: 0.5; }
 .recurring-progress { font-size: 0.85rem; opacity: 0.75; }
+.recurring-options { border: 0; display: flex; flex-direction: column; margin: 4px 0 0; min-width: 0; padding: 0; }
+.frequency-choice { display: grid; gap: 6px; grid-template-columns: repeat(3, 1fr); margin-bottom: 12px; }
+.task-form .frequency-choice label { font-weight: 600; margin: 0; position: relative; }
+.frequency-choice input { margin: 0; opacity: 0; pointer-events: none; position: absolute; }
+.frequency-choice span { background: var(--color-input); border: 1px solid transparent; border-radius: 11px; cursor: pointer; display: block; font-size: 0.9rem; padding: 10px 6px; text-align: center; transition: background-color 160ms ease; }
+.frequency-choice input:checked + span { background: var(--color-button); color: var(--color-button-text); }
+.frequency-choice input:focus-visible + span { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.visually-hidden { clip: rect(0 0 0 0); clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
 .task__session-button { margin-left: auto; }
 
 .task-form label {

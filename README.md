@@ -51,7 +51,9 @@ read-only and only readable by the UID stored in `/legacyOwner` (set by an admin
 that shares this database. Run `npm run test:firebase` before changing the rules.
 
 `recurrence.js` contains the pure recurring-task model: one stable task definition,
-dated completion events, idempotent session recording, weekly progress and a
+dated completion events, idempotent session recording, weekly, monthly or yearly
+progress (weeks start on Monday, months on the 1st, years on 1 January, at local
+midnight) and a
 replanning suggestion. It never creates calendar events.
 
 Run `npm test` for the deterministic LeetCode 3x/week end-to-end fixture.

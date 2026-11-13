@@ -1,4 +1,4 @@
-import { createRecurringTask, recordCompletion, weeklyProgress, getWeekStartForInstant } from "./recurrence.js"
+import { createRecurringTask, recordCompletion, currentProgress, PERIOD_LABELS } from "./recurrence.js"
 import { socialAuthErrorMessage } from "./auth-state.js"
 import { normalizeTask, parseTaskBackup, readBrowserRecovery, preserveBrowserRecovery } from "./task-recovery.js"
 import { firebaseSettingsFromEnv, verifyFirebaseProject } from "./firebase-config.js"
@@ -16,6 +16,9 @@ const recurringToggleEl = el("recurring-toggle")
 const recurringTargetEl = el("recurring-target")
 // The recurrence model still stores a session length; it is no longer asked for or shown.
 const DEFAULT_SESSION_MINUTES = 30
+const frequencyInputs = [...document.querySelectorAll('input[name="recurring-frequency"]')]
+const selectedFrequency = () => frequencyInputs.find(input => input.checked)?.value ?? "weekly"
+const TARGET_LABELS = { weekly: "Vezes por semana", monthly: "Vezes por mês", yearly: "Vezes por ano" }
 const themeToggleEl = el("theme-toggle")
 const recoveryStorage = { getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value) }
 const state = { user: null, tasks: [], taskStatus: "unavailable", isCreatingTask: false }
@@ -213,7 +216,7 @@ taskFormEl.addEventListener("submit", async event => {
     try {
         const task = { title, completed: false, createdAt: databaseApi.serverTimestamp(), updatedAt: databaseApi.serverTimestamp() }
         if (recurringToggleEl.checked) {
-            task.recurrence = createRecurringTask({ id: "pending", title, durationMinutes: DEFAULT_SESSION_MINUTES, targetCount: Number(recurringTargetEl.value), timezone: "Atlantic/Madeira" }).recurrence
+            task.recurrence = createRecurringTask({ id: "pending", title, durationMinutes: DEFAULT_SESSION_MINUTES, targetCount: Number(recurringTargetEl.value), timezone: "Atlantic/Madeira", frequency: selectedFrequency() }).recurrence
             task.completionEvents = []
         }
         await databaseApi.push(databaseApi.ref(database, `users/${user.uid}/tasks`), task)
@@ -221,7 +224,8 @@ taskFormEl.addEventListener("submit", async event => {
     } catch { if (version === sessionVersion) showError("Não foi possível guardar a tarefa. O texto foi mantido para tentares novamente.") }
     finally { if (version === sessionVersion) { state.isCreatingTask = false; renderTaskControls() } }
 })
-recurringToggleEl.addEventListener("change", () => { recurringTargetEl.hidden = !recurringToggleEl.checked; el("recurring-target-label").hidden = !recurringToggleEl.checked })
+recurringToggleEl.addEventListener("change", () => { el("recurring-options").hidden = !recurringToggleEl.checked })
+for (const input of frequencyInputs) input.addEventListener("change", () => { el("recurring-target-label").textContent = TARGET_LABELS[selectedFrequency()] })
 taskListEl.addEventListener("change", async event => {
     const checkbox = event.target.closest('[data-action="toggle-task"]'), user = signedInUser()
     if (!checkbox || !user) return
@@ -347,10 +351,10 @@ function createTaskElement(task) {
     title.textContent = task.title
     content.append(title)
     if (task.recurrence) {
-        const progress = weeklyProgress(task, getWeekStartForInstant(new Date().toISOString(), task.recurrence.timezone))
+        const progress = currentProgress(task)
         const progressEl = document.createElement("p"), sessionButton = document.createElement("button")
         progressEl.className = "recurring-progress"
-        progressEl.textContent = `${progress.doneCount}/${progress.targetCount} esta semana`
+        progressEl.textContent = `${progress.doneCount}/${progress.targetCount} ${PERIOD_LABELS[task.recurrence.frequency]}`
         sessionButton.type = "button"
         sessionButton.className = "task__session-button"
         sessionButton.dataset.action = "record-session"

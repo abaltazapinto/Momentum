@@ -1,3 +1,4 @@
+import { RECURRENCE_FREQUENCIES } from "./recurrence.js"
 const BROWSER_RECOVERY_KEY = "momentum-local-tasks-v1"
 const isObject = value => value !== null && typeof value === "object" && !Array.isArray(value)
 // Realtime Database rejects these characters in any key, at any depth.
@@ -14,7 +15,7 @@ export function normalizeTask(id, value) {
     // Validate everything up front so an import never stops half-way at a Firebase error.
     if (!hasValidKeys(value)) return null
     // Unsupported schedules are rejected instead of silently imported as one-off tasks.
-    if (value.recurrence != null && (!isObject(value.recurrence) || value.recurrence.frequency !== "weekly")) return null
+    if (value.recurrence != null && (!isObject(value.recurrence) || !RECURRENCE_FREQUENCIES.includes(value.recurrence.frequency))) return null
     const recurrence = value.recurrence ?? null
     if (recurrence) {
         if (!Number.isInteger(recurrence.targetCount) || recurrence.targetCount <= 0 || !Number.isFinite(recurrence.durationMinutes) || recurrence.durationMinutes <= 0 || typeof recurrence.timezone !== "string") return null
