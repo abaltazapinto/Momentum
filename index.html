@@ -132,9 +132,19 @@
 
             <p id="task-status" class="task-status" role="status" aria-live="polite"></p>
 
-            <ul id="task-list" aria-label="Tarefas"></ul>
+            <ul id="task-list" aria-label="Tarefas" tabindex="-1"></ul>
             </section>
         </main>
+        <dialog id="delete-dialog" class="confirm-dialog" role="alertdialog" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-message">
+            <div class="confirm-dialog__body">
+                <h2 id="delete-dialog-title" class="confirm-dialog__title">Eliminar tarefa?</h2>
+                <p id="delete-dialog-message" class="confirm-dialog__message">«<strong id="delete-dialog-task"></strong>» vai ser eliminada. Não é possível anular.</p>
+                <div class="confirm-dialog__actions">
+                    <button type="button" id="delete-cancel-button" class="confirm-dialog__cancel" autofocus>Cancelar</button>
+                    <button type="button" id="delete-confirm-button" class="confirm-dialog__confirm">Eliminar</button>
+                </div>
+            </div>
+        </dialog>
         <script src="index.js" type="module"></script>
     </body>
 </html>

@@ -172,6 +172,18 @@ html, body {
 .task-editor__cancel { background-color: transparent; border: 1px solid var(--color-border); color: var(--color-text); }
 .task-editor__cancel:hover { background-color: var(--color-delete-hover); }
 .task__session-button { font-size: 0.8rem; padding: 8px 10px; }
+.confirm-dialog { background: transparent; border: 0; color: var(--color-text); max-width: min(400px, calc(100% - 32px)); padding: 0; width: 100%; }
+.confirm-dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+.confirm-dialog__body { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 18px; box-shadow: var(--shadow-task); box-sizing: border-box; padding: 22px; }
+.confirm-dialog__title { font-size: 1.15rem; margin: 0 0 8px; }
+.confirm-dialog__message { line-height: 1.5; margin: 0 0 18px; overflow-wrap: anywhere; }
+.confirm-dialog__actions { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; }
+.confirm-dialog__cancel { background-color: transparent; border: 1px solid var(--color-border); color: var(--color-text); }
+.confirm-dialog__cancel:hover { background-color: var(--color-delete-hover); }
+.confirm-dialog__confirm { background-color: var(--color-error); color: var(--color-surface); }
+.confirm-dialog__confirm:hover { background-color: var(--color-error); filter: brightness(0.9); }
+#task-list:focus { outline: none; }
+#task-list:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 4px; }
 [hidden] { display: none !important; }
 .auth-status { color: var(--color-muted); font-size: 0.9rem; line-height: 1.5; margin: 8px 0 16px; }
 .email-login-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }

@@ -4,6 +4,7 @@ import { normalizeTask, parseTaskBackup, preserveBrowserRecovery } from "./task-
 import { firebaseSettingsFromEnv, verifyFirebaseProject } from "./firebase-config.js"
 import { tasksToCsv, tasksToJson, tasksToText } from "./task-export.js"
 import { applyTaskEdit, draftFromTask } from "./task-edit.js"
+import { createDeleteRequest, deleteTargetPath, isSameGestureAsOpen } from "./task-delete.js"
 
 const el = id => document.getElementById(id)
 const authFormEl = el("auth-form")
@@ -22,9 +23,12 @@ const frequencyInputs = [...document.querySelectorAll('input[name="recurring-fre
 const selectedFrequency = () => frequencyInputs.find(input => input.checked)?.value ?? "weekly"
 const TARGET_LABELS = { weekly: "Vezes por semana", monthly: "Vezes por mês", yearly: "Vezes por ano" }
 const themeToggleEl = el("theme-toggle")
+const deleteDialogEl = el("delete-dialog")
+let deleteDialogOpenedAt = 0
 const recoveryStorage = { getItem: key => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value) }
 // editing: draft of the task being edited (survives live re-renders of the list).
-const state = { user: null, tasks: [], taskStatus: "unavailable", isCreatingTask: false, editing: null }
+// pendingDelete: the task awaiting confirmation in the delete dialog.
+const state = { user: null, tasks: [], taskStatus: "unavailable", isCreatingTask: false, editing: null, pendingDelete: null }
 let savingEdit = false
 const EDIT_ERRORS = { "empty-title": "Escreve um nome para a tarefa.", "invalid-target": "Escolhe quantas vezes (1 ou mais)." }
 let auth = null, database = null, authApi = null, databaseApi = null
@@ -159,6 +163,7 @@ function stopTaskSession() {
     if (stopTasksSubscription) stopTasksSubscription()
     stopTasksSubscription = null
     sessionInFlight.clear()
+    closeDeleteDialog()
 }
 function closeTaskSession() {
     stopTaskSession()
@@ -253,6 +258,7 @@ taskListEl.addEventListener("click", async event => {
     if (!task) return
     if (button.dataset.action === "edit-task") return startEditing(task)
     if (button.dataset.action === "cancel-edit") return stopEditing()
+    if (button.dataset.action === "delete-task") return openDeleteDialog(task, user, event)
     if (sessionInFlight.has(task.id)) return
     const version = sessionVersion, taskRef = databaseApi.ref(database, `users/${user.uid}/tasks/${task.id}`)
     sessionInFlight.add(task.id)
@@ -265,10 +271,51 @@ taskListEl.addEventListener("click", async event => {
                 if (!current?.recurrence) return
                 return recordCompletion({ ...current, completionEvents: current.completionEvents || [] }, completion)
             })
-        } else if (button.dataset.action === "delete-task") await databaseApi.remove(taskRef)
+        }
     } catch { if (version === sessionVersion) showError("Não foi possível guardar a alteração. Tenta novamente.") }
     // A request from an older session must not release a lock owned by the current one.
     finally { if (version === sessionVersion) { sessionInFlight.delete(task.id); renderTasks() } }
+})
+// Deleting always goes through this dialog; nothing is removed before "Eliminar".
+function openDeleteDialog(task, user, event) {
+    if (event.detail > 1 || deleteDialogEl.open || sessionInFlight.has(task.id)) return
+    state.pendingDelete = createDeleteRequest(task, user.uid, sessionVersion)
+    el("delete-dialog-task").textContent = task.title
+    deleteDialogOpenedAt = event.timeStamp
+    clearStatus()
+    deleteDialogEl.showModal()
+}
+function closeDeleteDialog() {
+    const request = state.pendingDelete
+    state.pendingDelete = null
+    if (deleteDialogEl.open) deleteDialogEl.close()
+    return request
+}
+function cancelDelete() {
+    const request = closeDeleteDialog()
+    const opener = request && taskListEl.querySelector(`[data-task-id="${CSS.escape(request.taskId)}"] [data-action="delete-task"]`)
+    ;(opener || taskListEl).focus()
+}
+el("delete-cancel-button").addEventListener("click", cancelDelete)
+// Escape closes the dialog natively; the request is then still pending.
+deleteDialogEl.addEventListener("close", () => { if (state.pendingDelete) cancelDelete() })
+deleteDialogEl.addEventListener("click", event => {
+    // The dialog element itself is only the backdrop; its content sits in an inner wrapper.
+    if (event.target === deleteDialogEl && !isSameGestureAsOpen(event, deleteDialogOpenedAt)) cancelDelete()
+})
+el("delete-confirm-button").addEventListener("click", async event => {
+    if (isSameGestureAsOpen(event, deleteDialogOpenedAt)) return
+    const user = signedInUser(), request = closeDeleteDialog()
+    const path = deleteTargetPath(request, { uid: user?.uid, sessionVersion, tasks: state.tasks })
+    taskListEl.focus()
+    if (!path) { if (request) showInfo("Esta tarefa já não existe."); return }
+    if (sessionInFlight.has(request.taskId)) return
+    const version = sessionVersion
+    sessionInFlight.add(request.taskId)
+    clearStatus()
+    try { await databaseApi.remove(databaseApi.ref(database, path)) }
+    catch { if (version === sessionVersion) showError(`Não foi possível eliminar «${request.title}». Tenta novamente.`) }
+    finally { if (version === sessionVersion) { sessionInFlight.delete(request.taskId); renderTasks() } }
 })
 function startEditing(task) {
     state.editing = draftFromTask(task)
@@ -401,6 +448,18 @@ function renderTasks() {
     // Live updates rebuild the list; keep the cursor in the editor if it was there.
     const focusedField = document.activeElement?.closest?.(".task-editor") ? document.activeElement.dataset.field : null
     if (state.editing && !state.tasks.some(task => task.id === state.editing.id)) state.editing = null
+    // While the dialog is open, follow its task: deleted or renamed on another device.
+    if (state.pendingDelete) {
+        const pendingTask = state.tasks.find(task => task.id === state.pendingDelete.taskId)
+        if (!pendingTask) {
+            closeDeleteDialog()
+            if (state.taskStatus === "ready") showInfo("Esta tarefa já não existe.")
+            taskListEl.focus()
+        } else if (pendingTask.title !== state.pendingDelete.title) {
+            state.pendingDelete.title = pendingTask.title
+            el("delete-dialog-task").textContent = pendingTask.title
+        }
+    }
     taskListEl.textContent = ""
     renderTaskControls()
     if (!signedInUser()) { el("daily-summary").textContent = ""; return }
