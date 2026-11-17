@@ -448,11 +448,17 @@ function renderTasks() {
     // Live updates rebuild the list; keep the cursor in the editor if it was there.
     const focusedField = document.activeElement?.closest?.(".task-editor") ? document.activeElement.dataset.field : null
     if (state.editing && !state.tasks.some(task => task.id === state.editing.id)) state.editing = null
-    // Deleted elsewhere (another device) while the dialog was open.
-    if (state.pendingDelete && !state.tasks.some(task => task.id === state.pendingDelete.taskId)) {
-        closeDeleteDialog()
-        if (state.taskStatus === "ready") showInfo("Esta tarefa já não existe.")
-        taskListEl.focus()
+    // While the dialog is open, follow its task: deleted or renamed on another device.
+    if (state.pendingDelete) {
+        const pendingTask = state.tasks.find(task => task.id === state.pendingDelete.taskId)
+        if (!pendingTask) {
+            closeDeleteDialog()
+            if (state.taskStatus === "ready") showInfo("Esta tarefa já não existe.")
+            taskListEl.focus()
+        } else if (pendingTask.title !== state.pendingDelete.title) {
+            state.pendingDelete.title = pendingTask.title
+            el("delete-dialog-task").textContent = pendingTask.title
+        }
     }
     taskListEl.textContent = ""
     renderTaskControls()

@@ -13,7 +13,7 @@ export function deleteTargetPath(request, { uid, sessionVersion, tasks }) {
 }
 
 // The second click of a double-click (or a tap that lands as the dialog opens)
-// must not act on the dialog.
+// must not act on the dialog. Keyboard activation (detail 0) is always deliberate.
 export function isSameGestureAsOpen(event, openedAt, windowMs = 400) {
-    return event.detail > 1 || event.timeStamp - openedAt < windowMs
+    return event.detail > 1 || (event.detail !== 0 && event.timeStamp - openedAt < windowMs)
 }

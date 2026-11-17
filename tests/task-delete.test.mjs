@@ -35,3 +35,7 @@ test("second click of a double-click and taps right after opening are ignored", 
     assert.equal(isSameGestureAsOpen({ detail: 1, timeStamp: 1500 }, 1000), false)
     assert.equal(isSameGestureAsOpen({ detail: 0, timeStamp: 1500 }, 1000), false)
 })
+
+test("keyboard activation is never treated as part of the opening gesture", () => {
+    assert.equal(isSameGestureAsOpen({ detail: 0, timeStamp: 1100 }, 1000), false)
+})
